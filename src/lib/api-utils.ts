@@ -3,8 +3,6 @@ import type {
   ProductTotals,
   SortOrder,
   Product,
-  ApiResponse,
-  ApiError,
   PaginationParams
 } from '../types';
 
@@ -32,7 +30,6 @@ export function parseApiParams(request: Request): ApiParams {
   const sortDir = (url.searchParams.get("sortOrder") || "asc") as SortOrder;
   const searchTerm: string = url.searchParams.get("searchTerm") || "";
   const searchField = url.searchParams.get("searchField") as keyof Product | undefined;
-
   return { 
     page, 
     pageSize, 
@@ -73,31 +70,3 @@ export function getTableData(params: ApiParams): TableDataResponse {
   };
 }
 
-export function createApiResponse<T>(data: T): ApiResponse<T> {
-  return {
-    success: true,
-    data
-  };
-}
-
-export function createApiError(code: string, message: string, field?: string): ApiResponse {
-  const error: ApiError = {
-    code,
-    message,
-    field
-  };
-  
-  return {
-    success: false,
-    error,
-    message
-  };
-}
-
-export function handleApiError(error: unknown): ApiResponse {
-  if (error instanceof Error) {
-    return createApiError('INTERNAL_ERROR', error.message);
-  }
-  
-  return createApiError('UNKNOWN_ERROR', 'An unexpected error occurred');
-}

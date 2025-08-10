@@ -144,7 +144,7 @@ const price = Number(formData.get("price"));
 
 // Validation
 if (price === 99.99) {
-  return new Response("❌ Error: Price cannot be 99.99", { status: 500 });
+  return new Response("Error: Price cannot be 99.99", { status: 500 });
 }
 
 // Update data
@@ -184,7 +184,8 @@ const { data } = getProducts({ /* current page params */ });
 export function handleOptimisticUpdate(input: HTMLInputElement): void {
   const tr = input.closest("tr");
   const id = tr.id.replace("row-", "");
-  const key = input.step === "1" ? "quantity" : "price";
+  const key: "price" | "quantity" =
+    input.name === "quantity" ? "quantity" : "price";
 
   // Store reference for error handling
   (window as any).__lastRequestInput = input;
@@ -209,8 +210,15 @@ export function handleOptimisticUpdate(input: HTMLInputElement): void {
     exitEditMode(input);
   }
 
-  // Update related calculations (subtotals, totals)
-  updateSubtotalsOptimistically(tr, key, newValue);
+  // Update subtotals and totals optimistically
+  const subtotalElement = document.getElementById(`view-sub-${id}`);
+  if (subtotalElement) {
+    const price = key === "price" ? parseFloat(newValue) : parseFloat(tr.getAttribute("data-price") || "0");
+    const quantity = key === "quantity" ? parseInt(newValue) : parseInt(tr.getAttribute("data-quantity") || "0");
+    const newSubtotal = price * quantity;
+    subtotalElement.textContent = formatCurrency(newSubtotal);
+    subtotalElement.classList.add("optimistic-update");
+  }
 }
 ```
 
@@ -232,28 +240,40 @@ export function handleOptimisticUpdate(input: HTMLInputElement): void {
 When server returns 500 status (e.g., price = 99.99):
 
 ```typescript
-// Listen for HTMX error responses
-document.body.addEventListener('htmx:afterRequest', function(evt: any) {
-  if (evt.detail.xhr.status === 500) {
-    const input = (window as any).__lastRequestInput;
-    const viewElement = /* find display element */;
+// Handle 500 errors by preventing swap and showing error state
+document.body.addEventListener("htmx:beforeSwap", (evt: any) => {
+  if (evt.detail.xhr?.status === 500) {
+    evt.detail.shouldSwap = false; // Prevent HTMX from replacing the table
 
-    if (viewElement) {
-      // Show error immediately
-      viewElement.classList.add('text-error');
-      viewElement.textContent = 'Error';
+    if (lastRequestInput) {
+      const tr = lastRequestInput.closest("tr");
+      if (tr) {
+        const productId = tr.id.replace("row-", "");
+        const fieldType = lastRequestInput.name;
+        const viewElement = document.getElementById(
+          `view-${fieldType === "price" ? "price" : "qty"}-${productId}`,
+        );
 
-      // Revert after 1 second
-      setTimeout(() => {
-        const originalValue = input.defaultValue;
-        input.value = originalValue;
-        viewElement.textContent = formatCurrency(parseFloat(originalValue));
+        if (viewElement) {
+          viewElement.classList.add("text-error");
+          viewElement.textContent = "Error";
+        }
 
-        // Remove error styling after another second
+        // Revert after 1 second
         setTimeout(() => {
-          viewElement.classList.remove('text-error');
+          const originalValue = lastRequestInput.defaultValue || "";
+          lastRequestInput.value = originalValue;
+          if (viewElement && fieldType === "price") {
+            viewElement.textContent = formatCurrency(parseFloat(originalValue));
+          } else if (viewElement) {
+            viewElement.textContent = originalValue;
+          }
+          setTimeout(() => {
+            if (viewElement) viewElement.classList.remove("text-error");
+          }, 1000);
         }, 1000);
-      }, 1000);
+      }
+      lastRequestInput = null;
     }
   }
 });
@@ -350,6 +370,7 @@ const total = Array.from(visibleRows).reduce(
 ### TypeScript Integration (Comprehensive Type Safety)
 
 #### Core Domain Types
+
 ```typescript
 // /src/types/index.ts - Full type safety across the application
 export interface Product {
@@ -369,46 +390,29 @@ export interface ProductTotals {
   productCount: number;
 }
 
-// Branded types for extra safety
-export type ProductId = number & { readonly brand: unique symbol };
-export type Price = number & { readonly brand: unique symbol };
-export type Quantity = number & { readonly brand: unique symbol };
+// Type aliases for better readability
+export type SortOrder = 'asc' | 'desc';
 ```
 
 #### Validation Layer
+
 ```typescript
-// /src/lib/validation.ts - Type-safe validation
-export class ValidationService {
-  static validatePrice(value: number | string): ValidationResult {
-    // Comprehensive validation with typed errors
-  }
-  static sanitizePrice(value: number | string): Price | null {
-    // Returns branded type or null
-  }
+// Simple validation in API routes
+if (price === 99.99) {
+  return new Response(`Error: Price cannot be 99.99`, {
+    status: 500,
+    headers: { "Content-Type": "text/html" },
+  });
 }
 ```
 
-#### API Types
-```typescript
-// Type-safe API responses
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: ApiError;
-}
+#### Global Type Definitions
 
-export interface HtmxEvent extends CustomEvent {
-  detail: {
-    elt: HTMLElement;
-    xhr: XMLHttpRequest;
-    target: HTMLElement;
-    requestConfig: HtmxRequestConfig;
-  };
-}
-```
+The application uses TypeScript's global declarations to provide type safety for HTMX integration and utility functions, ensuring compile-time safety across client-side code.
 
 #### Global Type Augmentation
-```typescript
+
+````typescript
 // Window augmentation for type-safe globals
 declare global {
   interface Window {
@@ -434,7 +438,7 @@ declare global {
 .error-container {
   @apply text-error text-xs font-semibold bg-red-50 border-2 border-error;
 }
-```
+````
 
 #### Edit Mode Styling
 
@@ -545,11 +549,10 @@ return (
   - App code: ~23 kB (utilities and components)
   - HTMX: ~47 kB (framework replacement)
 - **TypeScript Implementation**:
-  - **~400 lines** of type definitions in `/src/types/index.ts`
-  - **~200 lines** of typed validation in `/src/lib/validation.ts`
-  - **~270 lines** of typed utilities in `/src/lib/page-utils.ts`
-  - **Full type coverage** across store, API utils, and formatting
-  - **Branded types** for Price/Quantity ensuring type safety
+  - **~36 lines** of clean type definitions in `/src/types/index.ts`
+  - **~290 lines** of typed utilities in `/src/lib/page-utils.ts`  
+  - **Full type coverage** across store, API utilities, and formatting
+  - **Simple, effective type safety** without complexity overhead
 - **Compressed**: ~23 kB gzipped
 - **Comparison**: Smaller than most React starter templates with better type safety
 

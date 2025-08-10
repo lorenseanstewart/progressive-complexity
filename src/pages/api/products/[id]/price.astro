@@ -6,14 +6,12 @@ import ApiResponse from "../../../../components/ApiResponse.astro";
 const id = Number(Astro.params.id);
 const formData = await Astro.request.formData();
 
-const price = Number(
-  formData.get("value") || formData.get("price") || formData.get("input")
-);
+const price = Number(formData.get("price"));
 
 if (price === 99.99) {
-  return new Response(`❌ Error: Price cannot be 99.99`, { 
+  return new Response(`Error: Price cannot be 99.99`, {
     status: 500,
-    headers: { 'Content-Type': 'text/html' }
+    headers: { "Content-Type": "text/html" },
   });
 }
 
@@ -30,7 +28,7 @@ const { data, total, totals } = getTableData(params);
 Astro.response.headers.set("Content-Type", "text/html");
 ---
 
-<ApiResponse 
+<ApiResponse
   data={data}
   total={total}
   totals={totals}

@@ -1,18 +1,14 @@
 import { formatCurrency } from "./format";
-import type { 
-  HtmxEvent, 
-  ProductField
-} from '../types';
 
 interface FocusInfo {
   id: string;
-  field: ProductField;
+  field: "price" | "quantity";
 }
 
 export function toggleEdit(
   id: number | string,
   editing: boolean,
-  field: ProductField | null = null,
+  field: "price" | "quantity" | null = null,
 ): void {
   const tr = document.getElementById(`row-${id}`);
   if (!tr) return;
@@ -61,10 +57,11 @@ export function handleOptimisticUpdate(input: HTMLInputElement): void {
   const tr = input.closest("tr") as HTMLTableRowElement | null;
   if (!tr) return;
 
-  const key: 'price' | 'quantity' = input.name === "quantity" ? "quantity" : "price";
+  const key: "price" | "quantity" =
+    input.name === "quantity" ? "quantity" : "price";
   const id: string = tr.id.replace("row-", "");
 
-  const focusInfo: FocusInfo = { id, field: key as ProductField };
+  const focusInfo: FocusInfo = { id, field: key };
   (window as any).__lastFocus = focusInfo;
 
   const fieldName = key === "quantity" ? "qty" : "price";
@@ -185,7 +182,7 @@ export function restoreFocus(): void {
   (window as any).__lastFocus = null;
 }
 
-function handleResponseError(input: HTMLInputElement, event: HtmxEvent): void {
+function handleResponseError(input: HTMLInputElement, event: any): void {
   if (event.detail.xhr && event.detail.xhr.status === 500) {
     const tr = input.closest("tr");
     if (tr) {
@@ -243,21 +240,19 @@ function handleResponseError(input: HTMLInputElement, event: HtmxEvent): void {
 let lastRequestInput: HTMLInputElement | null = null;
 
 // Store the input when a request is made
-document.body.addEventListener('htmx:beforeRequest', (evt: Event) => {
-  const htmxEvent = evt as HtmxEvent;
-  if (htmxEvent.target && (htmxEvent.target as HTMLElement).tagName === 'INPUT') {
-    lastRequestInput = htmxEvent.target as HTMLInputElement;
+document.body.addEventListener("htmx:beforeRequest", (evt: any) => {
+  if (evt.target && evt.target.tagName === "INPUT") {
+    lastRequestInput = evt.target;
   }
 });
 
 // Handle 500 errors by preventing swap and showing error state
-document.body.addEventListener('htmx:beforeSwap', (evt: Event) => {
-  const htmxEvent = evt as HtmxEvent;
-  if (htmxEvent.detail.xhr?.status === 500) {
-    (htmxEvent.detail as any).shouldSwap = false; // Prevent HTMX from replacing the table
-    
+document.body.addEventListener("htmx:beforeSwap", (evt: any) => {
+  if (evt.detail.xhr?.status === 500) {
+    evt.detail.shouldSwap = false; // Prevent HTMX from replacing the table
+
     if (lastRequestInput) {
-      handleResponseError(lastRequestInput, htmxEvent);
+      handleResponseError(lastRequestInput, evt);
       lastRequestInput = null;
     }
   }
@@ -281,6 +276,8 @@ declare global {
   }
 }
 
+// by adding these functions to the window object,
+// we can use them in html (Astro components in this case)
 window.pageUtils = {
   toggleEdit,
   handleOptimisticUpdate,

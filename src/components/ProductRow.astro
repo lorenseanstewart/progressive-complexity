@@ -4,9 +4,34 @@ import type { Product } from "../types";
 
 export interface Props {
   product: Product;
+  page?: number;
+  pageSize?: number;
+  sort?: string;
+  sortDir?: string;
+  searchTerm?: string;
 }
 
-const { product } = Astro.props;
+const {
+  product,
+  page = 1,
+  pageSize = 10,
+  sort = "id",
+  sortDir = "asc",
+  searchTerm = "",
+} = Astro.props;
+
+// Helper function to build URL with all table state
+const buildEditUrl = (productId: number, field: string) => {
+  const params = new URLSearchParams();
+  if (page !== 1) params.set("page", page.toString());
+  if (pageSize !== 10) params.set("limit", pageSize.toString());
+  if (sort !== "id") params.set("sortBy", sort);
+  if (sortDir !== "asc") params.set("sortOrder", sortDir);
+  if (searchTerm) params.set("searchTerm", searchTerm);
+
+  const queryString = params.toString();
+  return `/api/products/${productId}/${field}${queryString ? "?" + queryString : ""}`;
+};
 
 const subtotal = product.price * product.quantity;
 ---
@@ -31,24 +56,14 @@ const subtotal = product.price * product.quantity;
     >
     <span
       class="edit"
-      style="display:none;"
+      class="edit hidden"
     >
-      <!-- 
-        Error handling via HTMX event attributes (locality of behavior):
-        - hx-on:htmx:responseError handles 500 status responses locally
-        - We must set event.detail.shouldSwap = false to prevent HTMX from
-          replacing the table with the error response
-        - event.detail.isError = false prevents HTMX from treating this as
-          a fatal error that needs default error handling
-        - When price = 99.99, server returns 500 to demo error handling
-        - The error shows briefly in red, then reverts to original value
-      -->
       <input
         name="price"
         type="number"
         step="0.01"
         value={product.price}
-        hx-patch={`/api/products/${product.id}/price`}
+        hx-patch={buildEditUrl(product.id, "price")}
         hx-target="#table-wrapper"
         hx-select="#table-wrapper"
         hx-swap="outerHTML"
@@ -79,7 +94,7 @@ const subtotal = product.price * product.quantity;
     >
     <span
       class="edit"
-      style="display:none;"
+      class="edit hidden"
     >
       <!-- Same error handling pattern as price field above -->
       <input
@@ -87,7 +102,7 @@ const subtotal = product.price * product.quantity;
         type="number"
         step="1"
         value={product.quantity}
-        hx-patch={`/api/products/${product.id}/quantity`}
+        hx-patch={buildEditUrl(product.id, "quantity")}
         hx-target="#table-wrapper"
         hx-select="#table-wrapper"
         hx-swap="outerHTML"

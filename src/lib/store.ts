@@ -1,31 +1,13 @@
 import type { 
   Product, 
-  ProductsResponse, 
-  ProductTotals, 
-  QueryParams,
-  ProductId,
-  Price,
-  Quantity,
-  toProductId,
-  toPrice,
-  toQuantity
+  ProductTotals
 } from '../types';
 
 export interface ProductWithCurrency extends Product {
-  prices: Record<string, number>; // per-currency prices
+  // No additional properties needed currently
 }
 
 export const PAGE_SIZE = 10;
-
-export const currencyMap: Record<string, number> = {
-  USD: 1,
-  EUR: 0.92,
-  GBP: 0.78,
-  JPY: 157,
-  CAD: 1.35,
-  AUD: 1.5,
-  CHF: 0.89,
-};
 
 function seedProducts(): ProductWithCurrency[] {
   const names: readonly string[] = [
@@ -47,19 +29,13 @@ function seedProducts(): ProductWithCurrency[] {
     const basePrice: number = +(50 + Math.random() * 950).toFixed(2);
     const quantity: number = Math.floor(1 + Math.random() * 20);
     const name: string = names[i % names.length] + ' #' + i;
-    const prices: Record<string, number> = {};
-    
-    for (const [code, rate] of Object.entries(currencyMap)) {
-      prices[code] = +(basePrice * rate).toFixed(2);
-    }
     
     const product: ProductWithCurrency = {
       id: i,
       name,
       price: basePrice,
       quantity,
-      category: 'Electronics',
-      prices
+      category: 'Electronics'
     };
     
     products.push(product);
@@ -136,9 +112,6 @@ export function updateProductField(
       throw new Error('Price cannot be negative');
     }
     product.price = value;
-    for (const [code, rate] of Object.entries(currencyMap)) {
-      product.prices[code] = +(value * rate).toFixed(2);
-    }
   } else if (field === 'quantity') {
     if (value < 0) {
       throw new Error('Quantity cannot be negative');
@@ -149,9 +122,6 @@ export function updateProductField(
   return product;
 }
 
-export function getById(id: number): ProductWithCurrency | undefined {
-  return db.find((p) => p.id === id);
-}
 
 export function deleteProduct(id: number): void {
   const index = db.findIndex((p) => p.id === id);

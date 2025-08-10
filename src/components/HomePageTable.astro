@@ -69,7 +69,7 @@ const nextHref = `/?page=${nextPage}&limit=${pageSize}&sortBy=${sort}&sortOrder=
         </tr>
       </thead>
       <tbody>
-        {data.map((product) => <ProductRow product={product} />)}
+        {data.map((product) => <ProductRow product={product} page={page} pageSize={pageSize} sort={sort} sortDir={sortDir} searchTerm={searchTerm} />)}
       </tbody>
     </table>
 

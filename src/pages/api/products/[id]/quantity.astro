@@ -5,9 +5,7 @@ import ApiResponse from "../../../../components/ApiResponse.astro";
 
 const id = Number(Astro.params.id);
 const formData = await Astro.request.formData();
-const qty = Number(
-  formData.get("quantity") || formData.get("value") || formData.get("input")
-);
+const qty = Number(formData.get("quantity"));
 
 try {
   updateProductField(id, "quantity", qty);
