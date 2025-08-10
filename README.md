@@ -127,11 +127,20 @@ src/
 #### URL and History Management
 
 ```html
-<!-- Navigation updates URL, editing doesn't -->
-<button hx-push-url="true">
-  <!-- Pagination, search, sorting -->
-  <input hx-push-url="false" />
-  <!-- Field editing, deletion -->
+<!-- Navigation actions update URL for bookmarkability -->
+<button 
+  hx-get="/products?page=2" 
+  hx-target="#product-list"
+  hx-push-url="true">
+  Next Page
+</button>
+
+<!-- Edit actions don't update URL - they modify content in place -->
+<button 
+  hx-delete="/products/123" 
+  hx-target="closest tr"
+  hx-swap="outerHTML">
+  Delete
 </button>
 ```
 
