@@ -1,5 +1,55 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig } from "astro/config";
+import node from "@astrojs/node";
+import tailwind from "@astrojs/tailwind";
 
-// https://astro.build/config
-export default defineConfig({});
+export default defineConfig({
+  output: "server",
+  adapter: node({ mode: "standalone" }),
+  server: { port: 4322 },
+  integrations: [tailwind()],
+  
+  vite: {
+    optimizeDeps: {
+      include: ["lit"],
+    },
+    ssr: {
+      noExternal: ["lit"],
+    },
+    build: {
+      // CSS optimization
+      cssCodeSplit: true,
+      cssMinify: true,
+      
+      // JavaScript optimization
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          drop_console: true, // Remove console logs in production
+          drop_debugger: true,
+        },
+        mangle: true,
+      },
+      
+      // Chunk size optimization
+      chunkSizeWarningLimit: 500,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // Split vendor chunks for better caching
+            'vendor-lit': ['lit'],
+            'vendor-htmx': ['htmx.org'],
+          },
+        },
+      },
+    },
+  },
+
+  build: {
+    // Inline small stylesheets for better performance
+    inlineStylesheets: 'auto',
+    
+    // Compress HTML
+    compress: true,
+  },
+});

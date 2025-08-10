@@ -1,11 +1,37 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import Layout from "../layouts/Layout.astro";
+import SummaryHeader from "../components/SummaryHeader.astro";
+import HomePageTable from "../components/HomePageTable.astro";
+import { parseApiParams, getTableData } from "../lib/api-utils";
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const params = parseApiParams(Astro.request);
+const { data, total, totals } = getTableData(params);
 ---
 
+<script>
+  import "../components/web-components/TableHeader.ts";
+  import "../lib/page-utils.ts";
+</script>
+
 <Layout>
-	<Welcome />
+  <div class="space-y-4">
+    <SummaryHeader 
+      totals={totals}
+      page={params.page}
+      pageSize={params.pageSize}
+      sort={params.sort}
+      sortDir={params.sortDir}
+      searchTerm={params.searchTerm}
+    />
+
+    <HomePageTable 
+      data={data}
+      total={total}
+      page={params.page}
+      pageSize={params.pageSize}
+      sort={params.sort}
+      sortDir={params.sortDir}
+      searchTerm={params.searchTerm}
+    />
+  </div>
 </Layout>

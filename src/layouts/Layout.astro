@@ -1,22 +1,88 @@
+---
+import htmxUrl from "htmx.org/dist/htmx.min.js?url";
+const { title = "Progressive Complexity Demo", enableHtmx = true } =
+  Astro.props as {
+    title?: string;
+    enableHtmx?: boolean;
+  };
+---
+
 <!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
-	</head>
-	<body>
-		<slot />
-	</body>
+<html
+  lang="en"
+  data-theme="pastel"
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width"
+    />
+    <title>{title}</title>
+    {enableHtmx && <script src={htmxUrl} />}
+  </head>
+  <body
+    class="min-h-screen bg-base-100"
+  >
+    <div class="container mx-auto p-6 max-w-7xl">
+      <slot />
+    </div>
+  </body>
 </html>
 
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
+<style is:global>
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+
+  /* Animation for delete action */
+  .fade-out {
+    animation: fade-out 0.5s ease-out forwards;
+  }
+
+  @keyframes fade-out {
+    0% {
+      @apply opacity-100 translate-x-0;
+      height: auto;
+    }
+    50% {
+      @apply opacity-50 -translate-x-5;
+    }
+    100% {
+      @apply opacity-0 -translate-x-12;
+      height: 0;
+      padding: 0;
+      margin: 0;
+      border: none;
+    }
+  }
+
+  /* Error container styling - uses DaisyUI error color */
+  .error-container {
+    @apply text-error text-xs font-semibold bg-red-50 border-2 border-error rounded p-2 mt-1 hidden;
+  }
+
+  .error-container:not(:empty) {
+    @apply block;
+  }
+
+  /* Text alignment helper */
+  .right {
+    @apply text-right;
+  }
+
+  /* Edit mode styles */
+  .edit {
+    @apply hidden;
+  }
+
+  .view {
+    @apply inline-block;
+  }
+
+  /* Optimistic update visual feedback */
+  .optimistic-update {
+    @apply text-secondary !important;
+    transition: color 0.3s ease;
+  }
 </style>

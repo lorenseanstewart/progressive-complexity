@@ -1,0 +1,42 @@
+---
+import { updateProductField } from "../../../../lib/store";
+import { parseApiParams, getTableData } from "../../../../lib/api-utils";
+import ApiResponse from "../../../../components/ApiResponse.astro";
+
+const id = Number(Astro.params.id);
+const formData = await Astro.request.formData();
+
+const price = Number(
+  formData.get("value") || formData.get("price") || formData.get("input")
+);
+
+if (price === 99.99) {
+  return new Response(`❌ Error: Price cannot be 99.99`, { 
+    status: 500,
+    headers: { 'Content-Type': 'text/html' }
+  });
+}
+
+try {
+  updateProductField(id, "price", price);
+} catch (e) {
+  return new Response("Error updating product", { status: 500 });
+}
+
+const params = parseApiParams(Astro.request);
+const { data, total, totals } = getTableData(params);
+
+// Set response headers for HTMX
+Astro.response.headers.set("Content-Type", "text/html");
+---
+
+<ApiResponse 
+  data={data}
+  total={total}
+  totals={totals}
+  page={params.page}
+  pageSize={params.pageSize}
+  sort={params.sort}
+  sortDir={params.sortDir}
+  searchTerm={params.searchTerm}
+/>

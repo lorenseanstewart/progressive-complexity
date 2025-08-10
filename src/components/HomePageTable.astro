@@ -1,0 +1,131 @@
+---
+import ProductRow from "./ProductRow.astro";
+
+export interface Props {
+  data: Array<{
+    id: number;
+    name: string;
+    price: number;
+    quantity: number;
+  }>;
+  total: number;
+  page: number;
+  pageSize: number;
+  sort: string;
+  sortDir: "asc" | "desc";
+  searchTerm: string;
+}
+
+const { data, total, page, pageSize, sort, sortDir, searchTerm } = Astro.props;
+const totalPages = Math.ceil(total / pageSize);
+const prevPage = Math.max(1, page - 1);
+const nextPage = Math.min(totalPages, page + 1);
+const prevDisabled = page <= 1;
+const nextDisabled = page >= totalPages;
+const prevHref = `/?page=${prevPage}&limit=${pageSize}&sortBy=${sort}&sortOrder=${sortDir}&searchTerm=${encodeURIComponent(searchTerm)}`;
+const nextHref = `/?page=${nextPage}&limit=${pageSize}&sortBy=${sort}&sortOrder=${sortDir}&searchTerm=${encodeURIComponent(searchTerm)}`;
+---
+
+<div
+  class="card bg-base-100 shadow-lg"
+  id="table-wrapper"
+  hx-on="htmx:afterSwap: window.pageUtils.restoreFocus()"
+>
+  <div class="card-body">
+    <table class="table table-zebra w-full">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>
+            <table-header
+              label="Name"
+              field="name"
+              sort-by={sort}
+              sort-dir={sortDir}
+              search-term={searchTerm}
+              limit={String(pageSize)}
+              searchable
+            ></table-header>
+          </th>
+          <th class="right">
+            <table-header
+              label="Price"
+              field="price"
+              sort-by={sort}
+              sort-dir={sortDir}
+              search-term={searchTerm}
+              limit={String(pageSize)}
+            ></table-header>
+          </th>
+          <th class="right">
+            <table-header
+              label="Qty"
+              field="quantity"
+              sort-by={sort}
+              sort-dir={sortDir}
+              search-term={searchTerm}
+              limit={String(pageSize)}
+            ></table-header>
+          </th>
+          <th class="right">Subtotal</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((product) => <ProductRow product={product} />)}
+      </tbody>
+    </table>
+
+    <div class="flex justify-between items-center mt-4">
+      {
+        prevDisabled ? (
+          <span
+            class="btn btn-outline btn-disabled"
+            aria-disabled="true"
+            aria-label="First page"
+          >
+            Prev
+          </span>
+        ) : (
+          <a
+            class="btn btn-outline"
+            href={prevHref}
+            hx-get={prevHref}
+            hx-target="#table-wrapper"
+            hx-swap="outerHTML"
+            hx-select="#table-wrapper"
+            hx-push-url="true"
+          >
+            Prev
+          </a>
+        )
+      }
+      <div class="text-base-content/70">
+        Page {page} of {Math.ceil(total / pageSize)}
+      </div>
+      {
+        nextDisabled ? (
+          <span
+            class="btn btn-outline btn-disabled"
+            aria-disabled="true"
+            aria-label="Last page"
+          >
+            Next
+          </span>
+        ) : (
+          <a
+            class="btn btn-outline"
+            href={nextHref}
+            hx-get={nextHref}
+            hx-target="#table-wrapper"
+            hx-swap="outerHTML"
+            hx-select="#table-wrapper"
+            hx-push-url="true"
+          >
+            Next
+          </a>
+        )
+      }
+    </div>
+  </div>
+</div>

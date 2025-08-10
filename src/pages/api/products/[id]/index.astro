@@ -1,0 +1,34 @@
+---
+import { deleteProduct } from "../../../../lib/store";
+import { parseApiParams, getTableData } from "../../../../lib/api-utils";
+import ApiResponse from "../../../../components/ApiResponse.astro";
+
+if (Astro.request.method !== "DELETE") {
+  return new Response("Method not allowed", { status: 405 });
+}
+
+const id = Number(Astro.params.id);
+
+try {
+  deleteProduct(id);
+} catch (e) {
+  return new Response("Error deleting product", { status: 500 });
+}
+
+const params = parseApiParams(Astro.request);
+const { data, total, totals } = getTableData(params);
+
+// Set response headers for HTMX
+Astro.response.headers.set("Content-Type", "text/html");
+---
+
+<ApiResponse 
+  data={data}
+  total={total}
+  totals={totals}
+  page={params.page}
+  pageSize={params.pageSize}
+  sort={params.sort}
+  sortDir={params.sortDir}
+  searchTerm={params.searchTerm}
+/>

@@ -1,0 +1,41 @@
+---
+export interface Props {
+  totals: {
+    totalItems: number;
+    totalAmountUSD: number;
+  };
+  isOob?: boolean;
+}
+
+const { totals, isOob = false } = Astro.props;
+import { formatCurrency } from "../lib/format";
+---
+
+<div
+  class="stats shadow mt-4"
+  id="totals-summary"
+  role="status"
+  aria-live="polite"
+  hx-swap-oob={isOob ? "true" : undefined}
+>
+  <div class="stat">
+    <div class="stat-title">Total Items</div>
+    <div
+      class="stat-value text-primary"
+      id="total-items"
+      data-value={totals.totalItems}
+    >
+      {totals.totalItems}
+    </div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">Total Value</div>
+    <div
+      class="stat-value text-secondary"
+      id="total-amount"
+      data-value={totals.totalAmountUSD}
+    >
+      {formatCurrency(totals.totalAmountUSD)}
+    </div>
+  </div>
+</div>

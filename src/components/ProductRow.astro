@@ -1,0 +1,130 @@
+---
+import { formatCurrency } from "../lib/format";
+export interface Props {
+  product: {
+    id: number;
+    name: string;
+    price: number;
+    quantity: number;
+  };
+}
+
+const { product } = Astro.props;
+
+const subtotal = product.price * product.quantity;
+---
+
+<tr
+  id={`row-${product.id}`}
+  data-price={product.price}
+  data-quantity={product.quantity}
+>
+  <td>{product.id}</td>
+  <td>{product.name}</td>
+  <td class="right">
+    <span
+      class="view"
+      id={`view-price-${product.id}`}
+      tabindex="0"
+      aria-live="polite"
+      aria-atomic="true"
+      hx-on:click={`window.pageUtils.toggleEdit(${product.id}, true, 'price')`}
+      onkeydown={`if(event.key==='Enter'||event.key===' '){window.pageUtils.toggleEdit(${product.id}, true, 'price');event.preventDefault();}`}
+      >{formatCurrency(product.price)}</span
+    >
+    <span
+      class="edit"
+      style="display:none;"
+    >
+      <!-- 
+        Error handling via HTMX event attributes (locality of behavior):
+        - hx-on:htmx:responseError handles 500 status responses locally
+        - We must set event.detail.shouldSwap = false to prevent HTMX from
+          replacing the table with the error response
+        - event.detail.isError = false prevents HTMX from treating this as
+          a fatal error that needs default error handling
+        - When price = 99.99, server returns 500 to demo error handling
+        - The error shows briefly in red, then reverts to original value
+      -->
+      <input
+        name="price"
+        type="number"
+        step="0.01"
+        value={product.price}
+        hx-patch={`/api/products/${product.id}/price`}
+        hx-target="#table-wrapper"
+        hx-select="#table-wrapper"
+        hx-swap="outerHTML"
+        hx-push-url="false"
+        hx-trigger="keyup[key=='Enter'] changed, blur changed"
+        hx-on:htmx:before-request="window.pageUtils.handleOptimisticUpdate(this)"
+        onkeydown="window.pageUtils.cancelOnEscape(event,this)"
+        onkeyup="if(event.key==='Enter') window.pageUtils.handleEnterOptimistic(event,this)"
+        onblur="window.pageUtils.handleBlurOptimistic(this)"
+      />
+    </span>
+    <!-- Error target for price field -->
+    <div
+      id={`error-${product.id}-price`}
+      class="error-container"
+    >
+    </div>
+  </td>
+  <td class="right">
+    <span
+      class="view"
+      id={`view-qty-${product.id}`}
+      tabindex="0"
+      aria-live="polite"
+      aria-atomic="true"
+      hx-on:click={`window.pageUtils.toggleEdit(${product.id}, true, 'quantity')`}
+      onkeydown={`if(event.key==='Enter'||event.key===' '){window.pageUtils.toggleEdit(${product.id}, true, 'quantity');event.preventDefault();}`}
+      >{product.quantity}</span
+    >
+    <span
+      class="edit"
+      style="display:none;"
+    >
+      <!-- Same error handling pattern as price field above -->
+      <input
+        name="quantity"
+        type="number"
+        step="1"
+        value={product.quantity}
+        hx-patch={`/api/products/${product.id}/quantity`}
+        hx-target="#table-wrapper"
+        hx-select="#table-wrapper"
+        hx-swap="outerHTML"
+        hx-push-url="false"
+        hx-trigger="keyup[key=='Enter'] changed, blur changed"
+        hx-on:htmx:before-request="window.pageUtils.handleOptimisticUpdate(this)"
+        onkeydown="window.pageUtils.cancelOnEscape(event,this)"
+      />
+    </span>
+    <!-- Error target for quantity field -->
+    <div
+      id={`error-${product.id}-quantity`}
+      class="error-container"
+    >
+    </div>
+  </td>
+  <td class="right">
+    <span
+      class="view"
+      id={`view-sub-${product.id}`}
+      >{formatCurrency(subtotal)}</span
+    >
+  </td>
+  <td>
+    <button
+      class="btn btn-error btn-sm"
+      hx-delete={`/api/products/${product.id}`}
+      hx-target="#table-wrapper"
+      hx-swap="outerHTML swap:500ms"
+      hx-select="#table-wrapper"
+      hx-on:click="this.closest('tr').classList.add('fade-out')"
+    >
+      Delete
+    </button>
+  </td>
+</tr>

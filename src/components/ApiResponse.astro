@@ -1,0 +1,38 @@
+---
+import HomePageTable from "./HomePageTable.astro";
+import TotalsSummary from "./TotalsSummary.astro";
+
+export interface Props {
+  data: Array<{
+    id: number;
+    name: string;
+    price: number;
+    quantity: number;
+  }>;
+  total: number;
+  totals: {
+    totalItems: number;
+    totalAmountUSD: number;
+  };
+  page: number;
+  pageSize: number;
+  sort: string;
+  sortDir: "asc" | "desc";
+  searchTerm: string;
+}
+
+const { data, total, totals, page, pageSize, sort, sortDir, searchTerm } = Astro.props;
+---
+
+<!-- OOB swap for totals -->
+<TotalsSummary totals={totals} isOob={true} />
+
+<HomePageTable 
+  data={data}
+  total={total}
+  page={page}
+  pageSize={pageSize}
+  sort={sort}
+  sortDir={sortDir}
+  searchTerm={searchTerm}
+/>

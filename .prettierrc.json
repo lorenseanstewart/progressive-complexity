@@ -1,0 +1,25 @@
+{
+  "singleQuote": false,
+  "plugins": [
+    "prettier-plugin-astro"
+  ],
+  "overrides": [
+    {
+      "files": "*.astro",
+      "options": {
+        "parser": "astro",
+        "singleAttributePerLine": true,
+        "singleQuote": false
+      }
+    },
+    {
+      "files": [
+        "*.js",
+        "*.ts"
+      ],
+      "options": {
+        "singleQuote": false
+      }
+    }
+  ]
+}

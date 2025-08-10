@@ -1,0 +1,62 @@
+---
+import TotalsSummary from "./TotalsSummary.astro";
+
+export interface Props {
+  totals: {
+    totalItems: number;
+    totalAmountUSD: number;
+  };
+  page: number;
+  pageSize: number;
+  sort: string;
+  sortDir: "asc" | "desc";
+  searchTerm: string;
+}
+
+const { totals, page, pageSize, sort, sortDir, searchTerm } = Astro.props;
+---
+
+<div
+  class="card bg-base-200 shadow-lg"
+  id="summary"
+>
+  <div class="card-body">
+    <div class="flex justify-between items-center">
+      <div>
+        <h2 class="card-title text-2xl">Inventory Summary</h2>
+        <p class="text-base-content/70 text-sm">
+          Click a cell to edit. Press Enter to save or Escape to cancel (price
+          of 99.99 will trigger an error).
+        </p>
+      </div>
+    </div>
+    <TotalsSummary totals={totals} />
+
+    <!-- Hidden form to preserve search parameters -->
+    <form
+      id="search-params"
+      style="display: none;"
+    >
+      <input
+        name="page"
+        value={page}
+      />
+      <input
+        name="limit"
+        value={pageSize}
+      />
+      <input
+        name="sortBy"
+        value={sort}
+      />
+      <input
+        name="sortOrder"
+        value={sortDir}
+      />
+      <input
+        name="searchTerm"
+        value={searchTerm}
+      />
+    </form>
+  </div>
+</div>
