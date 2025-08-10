@@ -1,18 +1,15 @@
 ---
 import ProductRow from "./ProductRow.astro";
+import type { ProductWithCurrency } from "../lib/store";
+import type { Product, SortOrder } from "../types";
 
 export interface Props {
-  data: Array<{
-    id: number;
-    name: string;
-    price: number;
-    quantity: number;
-  }>;
+  data: ProductWithCurrency[];
   total: number;
   page: number;
   pageSize: number;
-  sort: string;
-  sortDir: "asc" | "desc";
+  sort: keyof Product | 'subtotal';
+  sortDir: SortOrder;
   searchTerm: string;
 }
 

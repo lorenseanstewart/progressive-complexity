@@ -2,7 +2,7 @@
 
 > **We declare the end of the false binary.** For too long, we've been forced to choose between static sites that can't interact and SPAs that can't ship fast. We reject this constraint. There is a vast, powerful middle ground that the industry has abandoned, and we're taking it back.
 
-**Live Demo**: [Try the interactive table here](/) • **Source**: [See the implementation](README.md)
+**GitHub Repository**: [Clone and run the demo locally](https://github.com/your-username/progressive-complexity) • **Technical Guide**: [See the implementation](README.md)
 
 ## The Great Deception: Static vs. SPA
 
@@ -11,23 +11,23 @@ The industry sold us a lie. They said our choices were:
 1. **Static HTML**: "Dead" pages with no interaction
 2. **Full SPA**: "Modern" apps with endless complexity
 
-**This is a false binary designed to sell frameworks.**
+**This is a false binary that limits our options.**
 
 Between these extremes lies a vast continent of possibility that's been overlooked. Interactive, dynamic, server-rendered applications that ship fast, perform well, and stay maintainable. This isn't the distant past; this is the future we can build today.
 
-**We're not going backwards. We're going beyond.** We also acknowledge that some products belong at Level 5 from day one (real‑time collaboration, complex client graphs, offline‑first, heavy mobile code‑sharing). The point isn’t rejection; it’s choosing the right level for the job.
+**We're not going backwards. We're going beyond.** We also acknowledge that some products need a frontend framework from day one (real‑time collaboration, complex client graphs, offline‑first, heavy mobile code‑sharing). The point isn’t rejection; it’s choosing the right level of complexity for the job.
 
 ## The Evidence: Real Numbers
 
-We built a full interactive application: editable table, pagination, search, real-time totals, optimistic updates, error handling. The complete user experience you'd find on any modern web platform.
+Check out the demo app. It's an interactive application: editable table cells, pagination, search, dynamic totals, optimistic updates, error handling. The complete user experience you'd find on any modern web platform.
 
-> \*Try the demo\*\*: Double-click any price or quantity to edit. To see optimistic updates, throttle your browser to "Slow 4G" in DevTools. You'll see the pink text appear (optimistic update) and then revert to the original text color (server response).
+> **Clone and run locally**: `git clone [repo-url] && cd progressive-complexity && npm install && npm run dev`. Click any price or quantity to edit. To see optimistic updates, throttle your browser to "Slow 4G" in DevTools. You'll see the pink text appear (optimistic update) and then revert to the original text color (server response). Change any price to 99.99 to trigger an error and see the graceful error handling.
 
 **The Result**:
 
-- **70 kB total JavaScript** (23 kB app + 47 kB HTMX)
-- **23 kB gzipped** (smaller than most framework starter templates)
-- **418 lines of custom TypeScript** (268 vanilla JS + 150 Web Components)
+- **70.4 kB total JavaScript** (23.4 kB app + 47 kB HTMX)
+- **23.3 kB gzipped** (smaller than most framework starter templates)
+- **418 lines of front end TypeScript** (268 vanilla JS + 150 Web Components)
 - **Standard build process** (no complex bundling or framework tooling)
 - **Navigation and pagination work without JavaScript**; search and inline editing require JS/HTMX
 
@@ -96,7 +96,7 @@ Hard truths, gently told:
 - Offline-first functionality
 - Heavy code sharing with mobile apps
 
-**We're not anti-framework fundamentalists.** Some problems genuinely need React/Vue/Svelte from day one. But most don't. The revolution isn't about rejecting tools; it's about rejecting defaults.
+**We're not anti-framework fundamentalists.** Some problems genuinely need React/Vue/Svelte from day one. But most don't. The revolution isn't about rejecting tools; it's about rejecting today's defaults.
 
 ## Addressing the Concerns
 
@@ -104,7 +104,7 @@ Hard truths, gently told:
 Everyone knows HTML better, or can learn it better in a day. HTMX can be learned in an afternoon. Your backend developers can contribute immediately. Your junior developers learn web fundamentals instead of framework abstractions.
 
 **"What about component reuse?"**  
-Server-side templates work great. [NestJS with ETA](/blog/eta-htmx-lit-stack) Astro, Go with Templ, Rails partials, Laravel Blade, Django templates: all proven at scale. You can still extract reusable components without client-side complexity.
+Server-side templates work great. [NestJS with ETA](/blog/eta-htmx-lit-stack), Astro, Go with Templ, Rails partials, Laravel Blade, Django templates: all proven at scale. You can still extract reusable components without client-side complexity.
 
 **"What about SEO and performance?"**  
 Server-rendered HTML is faster and more SEO-friendly than SPAs. You get meaningful content on first paint, not loading spinners.
@@ -114,6 +114,103 @@ That's the beauty of Progressive Complexity. With tools like Astro Islands, you 
 
 **"What about developer experience?"**  
 Better than ever. TypeScript throughout. Hot reloading. Modern tooling. The difference? You're not wrestling with framework complexity. You're building. Pure, joyful building.
+
+## Framework Developer's Guide: Your Skills, Revolutionized
+
+### For React Developers
+
+**Your expertise translates directly** - we're not asking you to abandon your knowledge, we're showing you how to wield it more precisely:
+
+**Component Composition → Server Templates**
+
+```jsx
+// React Component
+function ProductCard({ product, onEdit }) {
+  return <div onClick={() => onEdit(product.id)}>...</div>;
+}
+
+// Progressive Complexity (Astro)
+// ProductCard.astro
+<div hx-get={`/products/${product.id}/edit`}>...</div>;
+```
+
+Same mental model, less client-side state to manage.
+
+**State Management → URL Parameters + Server State**
+
+```jsx
+// React: Complex state synchronization
+const [filters, setFilters] = useState({});
+const [sort, setSort] = useState("name");
+const [page, setPage] = useState(1);
+
+// Progressive Complexity: Bookmarkable by default
+// URL: /?page=2&sort=price&filter=electronics
+// Server reads URL, returns filtered HTML
+```
+
+Your state is now shareable, bookmarkable, and SEO-friendly by default.
+
+**useEffect → Not Needed**
+
+```jsx
+// React: Effect synchronization complexity
+useEffect(() => {
+  fetchProducts().then(setProducts);
+}, [filters, sort, page]);
+
+// Progressive Complexity: Server renders complete state
+// No effects, no race conditions, no cleanup
+```
+
+**Context/Redux → Server Session**
+
+```jsx
+// React: Prop drilling or complex context setup
+<ThemeContext.Provider value={theme}>
+  <UserContext.Provider value={user}>
+    <App />
+  </UserContext.Provider>
+</ThemeContext.Provider>
+
+// Progressive Complexity: Server handles it
+// Session data available to all components during render
+// Type-safe with TypeScript from server to template
+```
+
+### What You Gain, Not What You Lose
+
+**Immediate Benefits**: HTML is already interactive, so no hydration mismatches. You ship 10% of the JavaScript with no bundle size anxiety. The server is your single source of truth, eliminating state synchronization bugs. You write less code and ship faster, while your backend team can contribute immediately. You get real first contentful paint, not loading spinners.
+
+**Your Advanced Skills Still Matter**: TypeScript provides full type safety from database to DOM. Server components are still components with the same architectural thinking. Your testing skills apply directly, and you're still optimizing performance:just what actually matters. Most importantly, choosing the right complexity level is system design at its finest.
+
+### Migration Strategy for Your Team
+
+**Week 1: Proof of Concept** : Pick one simple feature like search, filters, or a form. Implement it with HTMX alongside your React app and measure lines of code, bundle impact, and development time.
+
+**Week 2-3: Expand the Beachhead** : Convert 2-3 CRUD interfaces, train 1-2 backend developers to contribute, and document patterns that work for your team.
+
+**Week 4: Evaluate and Plan** : Compare metrics across performance, developer velocity, and code complexity. Identify features that should stay in React (Level 5) and plan progressive migration for Level 2-3 features.
+
+### Common Concerns from Framework Teams
+
+**"But we need type safety!"**
+Progressive Complexity provides **end-to-end type safety** with comprehensive TypeScript. We have full domain types for Product, Validation, and API responses in `/src/types`. Types flow from database to server functions to templates to client utilities. The validation layer uses branded types for Price/Quantity, and we provide global type definitions with window augmentation for HTMX and utility functions. Over 400 lines of TypeScript types ensure compile-time safety.
+
+**"What about our component library?"**
+Level 4 (Web Components) integrates with any framework. Use Lit, Stencil, or vanilla Web Components. Your React components can even stay for complex features.
+
+**"How do we test this?"**
+Unit tests work great for server functions with Jest/Vitest. Integration tests can verify HTML responses with Supertest. E2E tests with Playwright/Cypress work perfectly with HTMX. It's actually simpler than testing SPAs since there's no need to mock complex client state.
+
+**"What about developer experience?"**
+Astro provides instant hot reload updates. TypeScript has full support with type inference. Debugging is simpler without virtual DOM or complex state trees to navigate. Code splitting is handled automatically by the server.
+
+### The Revolutionary Truth for Framework Experts
+
+You've mastered complex tools. That mastery isn't wasted; it's evolved. Now you can choose complexity intentionally rather than by default, ship faster when the problem doesn't require a framework, scale thoughtfully by adding complexity only where needed, and lead the revolution by showing others the power of the middle ground.
+
+Your framework skills are your Level 5 superpower. But most problems are Level 2-3. Why use a sledgehammer for every nail?
 
 ## The Pragmatic Path Forward
 
@@ -129,11 +226,11 @@ Most projects never leave Level 2. Some need Level 3 polish. Few require Level 4
 
 ### For Existing Teams
 
-**React developers**: Try HTMX for your next product feature. That search interface, comment system, or checkout flow? You'll be surprised how little JavaScript you need.
+**React developers**: Clone this repository and try HTMX for your next feature. That search interface, comment system, or checkout flow? You'll be surprised how little JavaScript you need.
 
-**Backend developers**: You already know how to render HTML. HTMX just makes it interactive without learning a frontend framework.
+**Backend developers**: You already know HTML rendering. HTMX just makes it interactive. Run `npm run dev` and see how familiar it feels.
 
-**Startup CTOs**: Your MVP doesn't need React if HTMX gets you to market faster. Save your complexity budget for your actual differentiator, not your CRUD operations.
+**Tech leads**: Your next project doesn't need React if HTMX gets you there faster. Save your complexity budget for your actual differentiator.
 
 ## Real-World Adoption
 
@@ -193,14 +290,15 @@ Navigation and pagination work without JavaScript; HTMX enhances search and inli
 
 **We call upon developers**: Reject the false binary. Reclaim the middle ground. Show the industry that interactive web applications don't require megabytes of framework overhead. Prove that server-rendered HTML can be as dynamic and engaging as any SPA.
 
-**We call upon teams**: Question the default. When someone suggests React for a product page, ask why. When someone dismisses server-rendering as "old-fashioned," show them this demo. When someone claims you need a framework for "real" consumer applications, prove them wrong.
+**We call upon teams**: Question the default. When someone suggests React for a product page, ask why. When someone dismisses server-rendering as "old-fashioned," show them this repository. When someone claims you need a framework for "real" consumer applications, prove them wrong.
 
 **We call upon the industry**: Stop selling complexity as sophistication. Stop pushing Level 5 solutions for Level 2 problems. Stop teaching developers to reach for frameworks before understanding fundamentals. The web is powerful enough without your abstractions.
 
 ## The Manifesto in Action
 
-**Source Code**: [Study the techniques](README.md)  
-**Bundle Size**: 70 kB total of uncompressed JavaScript for a complete interactive application
+**GitHub Repository**: [Clone, explore, and run the demo](https://github.com/your-username/progressive-complexity)  
+**Technical Deep Dive**: [Study the implementation](README.md)  
+**Bundle Size**: 70.4 kB total of uncompressed JavaScript for a complete interactive application
 
 This isn't theory. This isn't nostalgia. This is modern web development, liberated from artificial constraints.
 

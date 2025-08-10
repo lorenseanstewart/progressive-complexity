@@ -1,12 +1,9 @@
 ---
 import { formatCurrency } from "../lib/format";
+import type { Product } from "../types";
+
 export interface Props {
-  product: {
-    id: number;
-    name: string;
-    price: number;
-    quantity: number;
-  };
+  product: Product;
 }
 
 const { product } = Astro.props;
@@ -57,7 +54,6 @@ const subtotal = product.price * product.quantity;
         hx-swap="outerHTML"
         hx-push-url="false"
         hx-trigger="keyup[key=='Enter'] changed, blur changed"
-        hx-on:htmx:before-request="window.pageUtils.handleOptimisticUpdate(this)"
         onkeydown="window.pageUtils.cancelOnEscape(event,this)"
         onkeyup="if(event.key==='Enter') window.pageUtils.handleEnterOptimistic(event,this)"
         onblur="window.pageUtils.handleBlurOptimistic(this)"
@@ -97,7 +93,6 @@ const subtotal = product.price * product.quantity;
         hx-swap="outerHTML"
         hx-push-url="false"
         hx-trigger="keyup[key=='Enter'] changed, blur changed"
-        hx-on:htmx:before-request="window.pageUtils.handleOptimisticUpdate(this)"
         onkeydown="window.pageUtils.cancelOnEscape(event,this)"
       />
     </span>

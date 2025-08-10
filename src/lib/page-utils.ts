@@ -1,14 +1,18 @@
 import { formatCurrency } from "./format";
+import type { 
+  HtmxEvent, 
+  ProductField
+} from '../types';
 
 interface FocusInfo {
   id: string;
-  field: string;
+  field: ProductField;
 }
 
 export function toggleEdit(
   id: number | string,
   editing: boolean,
-  field: string | null = null,
+  field: ProductField | null = null,
 ): void {
   const tr = document.getElementById(`row-${id}`);
   if (!tr) return;
@@ -54,13 +58,14 @@ export function toggleEdit(
 }
 
 export function handleOptimisticUpdate(input: HTMLInputElement): void {
-  const tr = input.closest("tr");
+  const tr = input.closest("tr") as HTMLTableRowElement | null;
   if (!tr) return;
 
-  const key = input.name === "quantity" ? "quantity" : "price";
-  const id = tr.id.replace("row-", "");
+  const key: 'price' | 'quantity' = input.name === "quantity" ? "quantity" : "price";
+  const id: string = tr.id.replace("row-", "");
 
-  (window as any).__lastFocus = { id, field: key };
+  const focusInfo: FocusInfo = { id, field: key as ProductField };
+  (window as any).__lastFocus = focusInfo;
 
   const fieldName = key === "quantity" ? "qty" : "price";
   const viewElement = document.getElementById(`view-${fieldName}-${id}`);
@@ -180,7 +185,7 @@ export function restoreFocus(): void {
   (window as any).__lastFocus = null;
 }
 
-function handleResponseError(input: HTMLInputElement, event: any): void {
+function handleResponseError(input: HTMLInputElement, event: HtmxEvent): void {
   if (event.detail.xhr && event.detail.xhr.status === 500) {
     const tr = input.closest("tr");
     if (tr) {
@@ -238,25 +243,45 @@ function handleResponseError(input: HTMLInputElement, event: any): void {
 let lastRequestInput: HTMLInputElement | null = null;
 
 // Store the input when a request is made
-document.body.addEventListener('htmx:beforeRequest', (evt: any) => {
-  if (evt.target && evt.target.tagName === 'INPUT') {
-    lastRequestInput = evt.target as HTMLInputElement;
+document.body.addEventListener('htmx:beforeRequest', (evt: Event) => {
+  const htmxEvent = evt as HtmxEvent;
+  if (htmxEvent.target && (htmxEvent.target as HTMLElement).tagName === 'INPUT') {
+    lastRequestInput = htmxEvent.target as HTMLInputElement;
   }
 });
 
 // Handle 500 errors by preventing swap and showing error state
-document.body.addEventListener('htmx:beforeSwap', (evt: any) => {
-  if (evt.detail.xhr?.status === 500) {
-    evt.detail.shouldSwap = false; // Prevent HTMX from replacing the table
+document.body.addEventListener('htmx:beforeSwap', (evt: Event) => {
+  const htmxEvent = evt as HtmxEvent;
+  if (htmxEvent.detail.xhr?.status === 500) {
+    (htmxEvent.detail as any).shouldSwap = false; // Prevent HTMX from replacing the table
     
     if (lastRequestInput) {
-      handleResponseError(lastRequestInput, evt);
+      handleResponseError(lastRequestInput, htmxEvent);
       lastRequestInput = null;
     }
   }
 });
 
-(window as any).pageUtils = {
+// Define the global pageUtils interface for type safety
+declare global {
+  interface Window {
+    pageUtils: {
+      toggleEdit: typeof toggleEdit;
+      handleOptimisticUpdate: typeof handleOptimisticUpdate;
+      handleEnterOptimistic: typeof handleEnterOptimistic;
+      handleBlurOptimistic: typeof handleBlurOptimistic;
+      restoreFocus: typeof restoreFocus;
+      cancelOnEscape: typeof cancelOnEscape;
+      exitEditMode: typeof exitEditMode;
+      formatCurrency: typeof formatCurrency;
+    };
+    __lastFocus: FocusInfo | null;
+    __lastRequestInput: HTMLInputElement | null;
+  }
+}
+
+window.pageUtils = {
   toggleEdit,
   handleOptimisticUpdate,
   handleEnterOptimistic,

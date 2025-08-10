@@ -1,23 +1,17 @@
 ---
 import HomePageTable from "./HomePageTable.astro";
 import TotalsSummary from "./TotalsSummary.astro";
+import type { ProductWithCurrency } from "../lib/store";
+import type { ProductTotals, SortOrder, Product } from "../types";
 
 export interface Props {
-  data: Array<{
-    id: number;
-    name: string;
-    price: number;
-    quantity: number;
-  }>;
+  data: ProductWithCurrency[];
   total: number;
-  totals: {
-    totalItems: number;
-    totalAmountUSD: number;
-  };
+  totals: ProductTotals;
   page: number;
   pageSize: number;
-  sort: string;
-  sortDir: "asc" | "desc";
+  sort: keyof Product | 'subtotal';
+  sortDir: SortOrder;
   searchTerm: string;
 }
 

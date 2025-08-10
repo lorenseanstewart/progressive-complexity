@@ -1,34 +1,103 @@
-import { PAGE_SIZE, getProducts, getAllTotals } from "./store";
+import { PAGE_SIZE, getProducts, getAllTotals, type ProductWithCurrency } from "./store";
+import type { 
+  ProductTotals,
+  SortOrder,
+  Product,
+  ApiResponse,
+  ApiError,
+  PaginationParams
+} from '../types';
 
 export interface ApiParams {
   page: number;
   pageSize: number;
-  sort: string;
-  sortDir: "asc" | "desc";
+  sort: keyof Product | 'subtotal';
+  sortDir: SortOrder;
   searchTerm: string;
+  searchField?: keyof Product;
+}
+
+export interface TableDataResponse {
+  data: ProductWithCurrency[];
+  total: number;
+  totals: ProductTotals;
+  pagination: PaginationParams;
 }
 
 export function parseApiParams(request: Request): ApiParams {
   const url = new URL(request.url);
-  const page = parseInt(url.searchParams.get("page") || "1");
-  const pageSize = parseInt(url.searchParams.get("limit") || String(PAGE_SIZE));
-  const sort = (url.searchParams.get("sortBy") || "id") as any;
-  const sortDir = (url.searchParams.get("sortOrder") || "asc") as "asc" | "desc";
-  const searchTerm = url.searchParams.get("searchTerm") || "";
+  const page: number = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
+  const pageSize: number = Math.max(1, Math.min(100, parseInt(url.searchParams.get("limit") || String(PAGE_SIZE), 10)));
+  const sort = (url.searchParams.get("sortBy") || "id") as keyof Product | 'subtotal';
+  const sortDir = (url.searchParams.get("sortOrder") || "asc") as SortOrder;
+  const searchTerm: string = url.searchParams.get("searchTerm") || "";
+  const searchField = url.searchParams.get("searchField") as keyof Product | undefined;
 
-  return { page, pageSize, sort, sortDir, searchTerm };
+  return { 
+    page, 
+    pageSize, 
+    sort, 
+    sortDir, 
+    searchTerm,
+    searchField: searchField || 'name'
+  };
 }
 
-export function getTableData(params: ApiParams) {
+export function getTableData(params: ApiParams): TableDataResponse {
   const { data, total } = getProducts({
     page: params.page,
     pageSize: params.pageSize,
-    sort: params.sort,
+    sort: params.sort === 'subtotal' ? 'price' : params.sort,
     sortDir: params.sortDir,
-    searchField: "name",
+    searchField: params.searchField || "name",
     searchTerm: params.searchTerm || undefined,
   });
+  
   const totals = getAllTotals();
+  const totalPages = Math.ceil(total / params.pageSize);
+  
+  const pagination: PaginationParams = {
+    page: params.page,
+    limit: params.pageSize,
+    total,
+    totalPages,
+    hasNext: params.page < totalPages,
+    hasPrev: params.page > 1
+  };
 
-  return { data, total, totals };
+  return { 
+    data, 
+    total, 
+    totals,
+    pagination
+  };
+}
+
+export function createApiResponse<T>(data: T): ApiResponse<T> {
+  return {
+    success: true,
+    data
+  };
+}
+
+export function createApiError(code: string, message: string, field?: string): ApiResponse {
+  const error: ApiError = {
+    code,
+    message,
+    field
+  };
+  
+  return {
+    success: false,
+    error,
+    message
+  };
+}
+
+export function handleApiError(error: unknown): ApiResponse {
+  if (error instanceof Error) {
+    return createApiError('INTERNAL_ERROR', error.message);
+  }
+  
+  return createApiError('UNKNOWN_ERROR', 'An unexpected error occurred');
 }

@@ -1,14 +1,13 @@
 ---
+import type { ProductTotals } from "../types";
+import { formatCurrency } from "../lib/format";
+
 export interface Props {
-  totals: {
-    totalItems: number;
-    totalAmountUSD: number;
-  };
+  totals: ProductTotals;
   isOob?: boolean;
 }
 
 const { totals, isOob = false } = Astro.props;
-import { formatCurrency } from "../lib/format";
 ---
 
 <div
@@ -23,9 +22,9 @@ import { formatCurrency } from "../lib/format";
     <div
       class="stat-value text-primary"
       id="total-items"
-      data-value={totals.totalItems}
+      data-value={totals.totalQuantity}
     >
-      {totals.totalItems}
+      {totals.totalQuantity}
     </div>
   </div>
   <div class="stat">
@@ -33,9 +32,9 @@ import { formatCurrency } from "../lib/format";
     <div
       class="stat-value text-secondary"
       id="total-amount"
-      data-value={totals.totalAmountUSD}
+      data-value={totals.grandTotal}
     >
-      {formatCurrency(totals.totalAmountUSD)}
+      {formatCurrency(totals.grandTotal)}
     </div>
   </div>
 </div>

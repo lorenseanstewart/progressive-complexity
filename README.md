@@ -347,46 +347,78 @@ const total = Array.from(visibleRows).reduce(
 
 **Pagination trap:** Client only sees current page, so client calculations are always wrong.
 
-### TypeScript Integration
+### TypeScript Integration (Comprehensive Type Safety)
 
-#### Utility Types
-
+#### Core Domain Types
 ```typescript
-// /src/lib/page-utils.ts
-interface FocusInfo {
-  id: string;
-  field: string;
+// /src/types/index.ts - Full type safety across the application
+export interface Product {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  category: string;
+  description?: string;
 }
 
-// Global window extensions for HTMX event data
-declare global {
-  interface Window {
-    pageUtils: {
-      toggleEdit: (
-        id: number | string,
-        editing: boolean,
-        field?: string,
-      ) => void;
-      handleOptimisticUpdate: (input: HTMLInputElement) => void;
-      // ... other utilities
-    };
+export interface ProductTotals {
+  totalPrice: number;
+  totalQuantity: number;
+  grandTotal: number;
+  averagePrice: number;
+  productCount: number;
+}
+
+// Branded types for extra safety
+export type ProductId = number & { readonly brand: unique symbol };
+export type Price = number & { readonly brand: unique symbol };
+export type Quantity = number & { readonly brand: unique symbol };
+```
+
+#### Validation Layer
+```typescript
+// /src/lib/validation.ts - Type-safe validation
+export class ValidationService {
+  static validatePrice(value: number | string): ValidationResult {
+    // Comprehensive validation with typed errors
+  }
+  static sanitizePrice(value: number | string): Price | null {
+    // Returns branded type or null
   }
 }
 ```
 
-#### Component Props
-
+#### API Types
 ```typescript
-// /src/components/ProductRow.astro
-export interface Props {
-  product: {
-    id: number;
-    name: string;
-    price: number;
-    quantity: number;
+// Type-safe API responses
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: ApiError;
+}
+
+export interface HtmxEvent extends CustomEvent {
+  detail: {
+    elt: HTMLElement;
+    xhr: XMLHttpRequest;
+    target: HTMLElement;
+    requestConfig: HtmxRequestConfig;
   };
 }
 ```
+
+#### Global Type Augmentation
+```typescript
+// Window augmentation for type-safe globals
+declare global {
+  interface Window {
+    pageUtils: {
+      toggleEdit: typeof toggleEdit;
+      handleOptimisticUpdate: typeof handleOptimisticUpdate;
+      // All utilities fully typed
+    };
+  }
+}
 
 ### CSS Architecture
 
@@ -512,11 +544,14 @@ return (
 - **Total JavaScript**: ~70 kB uncompressed (production build)
   - App code: ~23 kB (utilities and components)
   - HTMX: ~47 kB (framework replacement)
-- **Custom TypeScript**: ~400 lines total
-  - Vanilla JS utilities for optimistic updates, error handling, keyboard shortcuts
-  - Web Components for complex table headers
+- **TypeScript Implementation**:
+  - **~400 lines** of type definitions in `/src/types/index.ts`
+  - **~200 lines** of typed validation in `/src/lib/validation.ts`
+  - **~270 lines** of typed utilities in `/src/lib/page-utils.ts`
+  - **Full type coverage** across store, API utils, and formatting
+  - **Branded types** for Price/Quantity ensuring type safety
 - **Compressed**: ~23 kB gzipped
-- **Comparison**: Smaller than most React starter templates
+- **Comparison**: Smaller than most React starter templates with better type safety
 
 > ⚠️ **Measurement Note**: Run `npm run build && npm run report` to see actual production sizes. The dev server (`npm run dev`) includes development tools that don't ship to production.
 
