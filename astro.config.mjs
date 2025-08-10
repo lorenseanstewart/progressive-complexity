@@ -6,7 +6,6 @@ import tailwind from "@astrojs/tailwind";
 export default defineConfig({
   output: "server",
   adapter: node({ mode: "standalone" }),
-  server: { port: 4322 },
   integrations: [tailwind()],
   
   vite: {

@@ -95,7 +95,7 @@ export class TableHeader extends LitElement {
     const down = this.sortBy === this.field && this.sortDir === "desc";
 
     return html`
-      <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
         <a
           class="btn btn-ghost btn-xs normal-case font-normal justify-start cursor-pointer"
           href=${this.getSortUrl()}
@@ -135,7 +135,7 @@ export class TableHeader extends LitElement {
                 <input
                   name="searchTerm"
                   type="search"
-                  class="input input-bordered input-xs w-28"
+                  class="input input-bordered input-xs w-24"
                   placeholder="Search"
                   .value=${this.searchTerm}
                   @input=${this.onSearchInput}

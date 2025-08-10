@@ -1,5 +1,7 @@
 ---
 import htmxUrl from "htmx.org/dist/htmx.min.js?url";
+import UserWelcome from "../components/UserWelcome.astro";
+
 const { title = "Progressive Complexity Demo", enableHtmx = true } =
   Astro.props as {
     title?: string;
@@ -24,6 +26,7 @@ const { title = "Progressive Complexity Demo", enableHtmx = true } =
   <body
     class="min-h-screen bg-base-100"
   >
+    <UserWelcome />
     <div class="container mx-auto p-6 max-w-7xl">
       <slot />
     </div>

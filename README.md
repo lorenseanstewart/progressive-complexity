@@ -63,14 +63,22 @@ This application demonstrates multiple complexity levels working together:
 The file structure reflects Progressive Complexity levels:
 
 ```
-src/components/
-├── web-components/          # Level 4: Complex stateful components
-│   └── TableHeader.ts       # Search + sorting with debounced input
-├── HomePageTable.astro      # Level 2: Server-rendered components
-├── ProductRow.astro         # Simple data display with HTMX attributes
-├── SummaryHeader.astro      # Header with totals summary
-├── TotalsSummary.astro      # Read-only totals display
-└── ApiResponse.astro        # Reusable API response wrapper
+src/
+├── middleware.ts            # JWT authentication middleware
+├── components/
+│   ├── web-components/      # Level 4: Complex stateful components
+│   │   └── TableHeader.ts   # Search + sorting with debounced input
+│   ├── HomePageTable.astro  # Level 2: Server-rendered components
+│   ├── ProductRow.astro     # Simple data display with HTMX attributes
+│   ├── SummaryHeader.astro  # Header with totals summary
+│   ├── TotalsSummary.astro  # Read-only totals display
+│   ├── UserWelcome.astro    # User display from JWT context
+│   └── ApiResponse.astro    # Reusable API response wrapper
+└── lib/
+    ├── store.ts             # Product data store
+    ├── api-utils.ts         # API parsing utilities
+    ├── page-utils.ts        # Client-side interaction utilities
+    └── format.ts            # Data formatting helpers
 ```
 
 **Key insight**: Most components stay at Level 2 (server-rendered Astro components). Only when we needed complex client-side state (debounced search with focus preservation that is reusable) did we escalate to Level 4 (Web Components). This keeps the bulk of the application simple while allowing sophisticated interactions where needed.
@@ -455,6 +463,109 @@ declare global {
 ```
 
 **Simple, predictable:** No complex CSS-in-JS, no styled-components, just utility classes.
+
+### Server-Side Middleware (Authentication)
+
+#### JWT Authentication Middleware
+
+```typescript
+// /src/middleware.ts - Single middleware for JWT parsing and user context
+export const onRequest = defineMiddleware(async (context, next) => {
+  // Step 1: Extract JWT from Authorization header or use demo token
+  const token = extractJWT(context.request);
+  
+  if (token) {
+    // Step 2: Parse JWT payload (demo: no signature verification)
+    const jwtPayload = parseJWT(token);
+    
+    if (jwtPayload) {
+      context.locals.jwt = jwtPayload;
+      console.log(`JWT parsed for user: ${jwtPayload.username}`);
+      
+      // Step 3: Fetch user from "database"
+      const user = await getUser(jwtPayload.userId);
+      
+      if (user) {
+        context.locals.user = user;
+        console.log(`User context loaded: ${user.name} (@${user.username})`);
+      }
+    }
+  }
+  
+  return next(); // Continue to route handler
+});
+```
+
+**Demo JWT Token** (hardcoded for development):
+```javascript
+// Payload: { userId: 1, username: "stew_loren", role: "admin", ... }
+const DEMO_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQi...";
+```
+
+#### Simplified JWT-Only Approach
+
+```typescript
+// No separate user service needed - use JWT data directly
+export const onRequest = defineMiddleware(async (context, next) => {
+  context.locals.jwt = null;
+
+  const token = extractJWT(context.request);
+  
+  if (token) {
+    const jwtPayload = parseJWT(token);
+    
+    if (jwtPayload) {
+      context.locals.jwt = jwtPayload; // All user data from JWT
+      console.log(`JWT parsed for user: ${jwtPayload.username} (${jwtPayload.role})`);
+    }
+  }
+
+  return next();
+});
+```
+
+#### Accessing JWT Data in Components
+
+```astro
+---
+// Any Astro component can access JWT data from middleware
+const { jwt } = Astro.locals;
+---
+
+<div class="user-welcome">
+  {jwt ? (
+    <span>Welcome, {jwt.username}! ({jwt.role})</span>
+  ) : (
+    <span>Anonymous User</span>
+  )}
+  
+  {jwt && (
+    <div class="badge badge-success">JWT Active</div>
+  )}
+</div>
+```
+
+#### Type Safety for Middleware
+
+```typescript
+// Global type augmentation for Astro.locals
+declare global {
+  namespace App {
+    interface Locals {
+      jwt: JWTPayload | null;
+    }
+  }
+}
+```
+
+**Why Middleware at This Level?**
+
+- **Server-side authentication**: No client-side token exposure or manipulation
+- **Universal access**: `Astro.locals.jwt` available in all routes and components
+- **Performance**: Single JWT parse per request, cached in context
+- **Security**: JWT validation happens before any route logic
+- **Simplicity**: All user data comes from JWT - no additional database calls
+- **Progressive Enhancement**: Works with or without JavaScript enabled
 
 ### Accessibility
 
