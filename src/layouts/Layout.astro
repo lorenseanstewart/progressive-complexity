@@ -20,12 +20,14 @@ const { title = "Progressive Complexity Demo", enableHtmx = true } =
       name="viewport"
       content="width=device-width"
     />
+    <meta
+      name="description"
+      content="A demo of progressive complexity"
+    />
     <title>{title}</title>
     {enableHtmx && <script src={htmxUrl} />}
   </head>
-  <body
-    class="min-h-screen bg-base-100"
-  >
+  <body class="min-h-screen bg-base-100">
     <UserWelcome />
     <div class="container mx-auto p-6 max-w-7xl">
       <slot />
