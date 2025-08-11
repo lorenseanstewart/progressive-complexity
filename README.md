@@ -246,9 +246,8 @@ export function handleOptimisticUpdate(input: HTMLInputElement): void {
 ```html
 <input
   hx-patch="/api/products/1/price"
-  hx-on:htmx:beforeRequest="window.pageUtils.handleOptimisticUpdate(this)"
   onblur="window.pageUtils.handleBlurOptimistic(this)"
-  onkeyup="if(event.key==='Enter') window.pageUtils.handleEnterOptimistic(event,this)"
+  onkeyup="if(event.key==='Enter') window.pageUtils.handleEnterOptimistic(event, this)"
 />
 ```
 
