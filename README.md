@@ -1,6 +1,6 @@
 # Progressive Complexity Demo - Technical Implementation
 
-> **See the [Progressive Complexity Manifesto](progressive-complexity-manifesto.md) for the philosophy and high-level overview**
+> **See the [Progressive Complexity Manifesto]([progressive-complexity-manifesto.md](https://www.lorenstew.art/blog/progressive-complexity-manifesto)) for the philosophy and high-level overview**
 
 This repository demonstrates how to build a full-featured interactive application using HTML, HTMX, and minimal JavaScript. The result is a **~70 kB JavaScript bundle** that delivers enterprise-grade functionality without framework complexity.
 
