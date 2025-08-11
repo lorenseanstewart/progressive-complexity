@@ -128,18 +128,12 @@ src/
 
 ```html
 <!-- Navigation actions update URL for bookmarkability -->
-<button 
-  hx-get="/products?page=2" 
-  hx-target="#product-list"
-  hx-push-url="true">
+<button hx-get="/products?page=2" hx-target="#product-list" hx-push-url="true">
   Next Page
 </button>
 
 <!-- Edit actions don't update URL - they modify content in place -->
-<button 
-  hx-delete="/products/123" 
-  hx-target="closest tr"
-  hx-swap="outerHTML">
+<button hx-delete="/products/123" hx-target="closest tr" hx-swap="outerHTML">
   Delete
 </button>
 ```
@@ -230,8 +224,14 @@ export function handleOptimisticUpdate(input: HTMLInputElement): void {
   // Update subtotals and totals optimistically
   const subtotalElement = document.getElementById(`view-sub-${id}`);
   if (subtotalElement) {
-    const price = key === "price" ? parseFloat(newValue) : parseFloat(tr.getAttribute("data-price") || "0");
-    const quantity = key === "quantity" ? parseInt(newValue) : parseInt(tr.getAttribute("data-quantity") || "0");
+    const price =
+      key === "price"
+        ? parseFloat(newValue)
+        : parseFloat(tr.getAttribute("data-price") || "0");
+    const quantity =
+      key === "quantity"
+        ? parseInt(newValue)
+        : parseInt(tr.getAttribute("data-quantity") || "0");
     const newSubtotal = price * quantity;
     subtotalElement.textContent = formatCurrency(newSubtotal);
     subtotalElement.classList.add("optimistic-update");
@@ -310,37 +310,107 @@ document.body.addEventListener("htmx:beforeSwap", (evt: any) => {
 
 ```typescript
 // /src/components/web-components/TableHeader.ts
+import { LitElement, html } from "lit";
+import { customElement, property } from "lit/decorators.js";
+
 @customElement("table-header")
 export class TableHeader extends LitElement {
-  @property() field = "";
-  @property() label = "";
-  @property() searchable = false;
+  // Use light DOM to work properly within table cells
+  protected createRenderRoot() {
+    return this;
+  }
 
-  // Debounced search to prevent excessive requests
-  private debounceSearch = debounce((value: string) => {
-    const url = new URL(window.location);
-    url.searchParams.set("searchTerm", value);
+  private debounceTimer: number | null = null;
 
-    // Trigger HTMX request programmatically
-    htmx.get(url.toString(), {
-      target: "#table-wrapper",
-      swap: "outerHTML",
+  @property({ type: String, attribute: "label" }) label: string = "";
+  @property({ type: String, attribute: "field" }) field:
+    | "name"
+    | "price"
+    | "quantity" = "name";
+  @property({ type: Boolean, attribute: "searchable", reflect: true })
+  searchable = false;
+  @property({ type: String, attribute: "sort-by" }) sortBy: string = "id";
+  @property({ type: String, attribute: "sort-dir" }) sortDir: "asc" | "desc" =
+    "asc";
+  @property({ type: String, attribute: "search-term" }) searchTerm: string = "";
+  @property({ type: String }) limit: string = "10";
+
+  private buildUrl(params: Record<string, string>): string {
+    const url = new URL(window.location.href);
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    return url.pathname + url.search;
+  }
+
+  private getSortUrl(): string {
+    const dir =
+      this.sortBy === this.field && this.sortDir === "asc" ? "desc" : "asc";
+    return this.buildUrl({
+      sortBy: this.field,
+      sortOrder: dir,
+      page: "1",
+      limit: this.limit,
+      searchTerm: this.searchTerm,
     });
-  }, 300);
+  }
+
+  private onSearchInput(e: Event) {
+    /* debounced search logic - see TableHeader.ts for full implementation */
+  }
 
   render() {
+    const up = this.sortBy === this.field && this.sortDir === "asc";
+    const down = this.sortBy === this.field && this.sortDir === "desc";
+
     return html`
       <div class="flex items-center gap-2">
-        ${this.label}
+        <a
+          class="btn btn-ghost btn-xs normal-case font-normal justify-start cursor-pointer"
+          href=${this.getSortUrl()}
+          hx-get=${this.getSortUrl()}
+          hx-target="#table-wrapper"
+          hx-select="#table-wrapper"
+          hx-swap="outerHTML"
+          hx-push-url="true"
+          aria-label="Sort by ${this.label}"
+        >
+          <span>${this.label}</span>
+          <span class="flex flex-col ml-1 leading-none text-xs">
+            <span class="${up ? "text-primary" : "opacity-50"}"
+              >${up ? "▲" : "△"}</span
+            >
+            <span class="${down ? "text-primary" : "opacity-50"}"
+              >${down ? "▼" : "▽"}</span
+            >
+          </span>
+        </a>
         ${this.searchable
           ? html`
-              <input
-                class="input input-xs"
-                @input=${(e) => this.debounceSearch(e.target.value)}
-                placeholder="Search..."
-              />
+              <form
+                class="search-form flex"
+                method="GET"
+                action="/"
+                hx-get="/"
+                hx-target="#table-wrapper"
+                hx-select="#table-wrapper"
+                hx-swap="outerHTML"
+                hx-push-url="true"
+              >
+                <input type="hidden" name="page" value="1" />
+                <input type="hidden" name="limit" .value=${this.limit} />
+                <input type="hidden" name="sortBy" .value=${this.sortBy} />
+                <input type="hidden" name="sortOrder" .value=${this.sortDir} />
+                <input
+                  name="searchTerm"
+                  type="search"
+                  class="input input-bordered input-xs w-24"
+                  placeholder="Search"
+                  .value=${this.searchTerm}
+                  @input=${this.onSearchInput}
+                  aria-label="Search by ${this.label.toLowerCase()}"
+                />
+              </form>
             `
-          : ""}
+          : null}
       </div>
     `;
   }
@@ -408,7 +478,7 @@ export interface ProductTotals {
 }
 
 // Type aliases for better readability
-export type SortOrder = 'asc' | 'desc';
+export type SortOrder = "asc" | "desc";
 ```
 
 #### Validation Layer
@@ -482,30 +552,31 @@ declare global {
 export const onRequest = defineMiddleware(async (context, next) => {
   // Step 1: Extract JWT from Authorization header or use demo token
   const token = extractJWT(context.request);
-  
+
   if (token) {
     // Step 2: Parse JWT payload (demo: no signature verification)
     const jwtPayload = parseJWT(token);
-    
+
     if (jwtPayload) {
       context.locals.jwt = jwtPayload;
       console.log(`JWT parsed for user: ${jwtPayload.username}`);
-      
+
       // Step 3: Fetch user from "database"
       const user = await getUser(jwtPayload.userId);
-      
+
       if (user) {
         context.locals.user = user;
         console.log(`User context loaded: ${user.name} (@${user.username})`);
       }
     }
   }
-  
+
   return next(); // Continue to route handler
 });
 ```
 
 **Demo JWT Token** (hardcoded for development):
+
 ```javascript
 // Payload: { userId: 1, username: "stew_loren", role: "admin", ... }
 const DEMO_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQi...";
@@ -519,13 +590,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.jwt = null;
 
   const token = extractJWT(context.request);
-  
+
   if (token) {
     const jwtPayload = parseJWT(token);
-    
+
     if (jwtPayload) {
       context.locals.jwt = jwtPayload; // All user data from JWT
-      console.log(`JWT parsed for user: ${jwtPayload.username} (${jwtPayload.role})`);
+      console.log(
+        `JWT parsed for user: ${jwtPayload.username} (${jwtPayload.role})`,
+      );
     }
   }
 
@@ -542,15 +615,17 @@ const { jwt } = Astro.locals;
 ---
 
 <div class="user-welcome">
-  {jwt ? (
-    <span>Welcome, {jwt.username}! ({jwt.role})</span>
-  ) : (
-    <span>Anonymous User</span>
-  )}
-  
-  {jwt && (
-    <div class="badge badge-success">JWT Active</div>
-  )}
+  {
+    jwt ? (
+      <span>
+        Welcome, {jwt.username}! ({jwt.role})
+      </span>
+    ) : (
+      <span>Anonymous User</span>
+    )
+  }
+
+  {jwt && <div class="badge badge-success">JWT Active</div>}
 </div>
 ```
 
@@ -669,8 +744,8 @@ return (
   - App code: ~23 kB (utilities and components)
   - HTMX: ~47 kB (framework replacement)
 - **TypeScript Implementation**:
-  - **~36 lines** of clean type definitions in `/src/types/index.ts`
-  - **~290 lines** of typed utilities in `/src/lib/page-utils.ts`  
+  - **~37 lines** of clean type definitions in `/src/types/index.ts`
+  - **~291 lines** of typed utilities in `/src/lib/page-utils.ts`
   - **Full type coverage** across store, API utilities, and formatting
   - **Simple, effective type safety** without complexity overhead
 - **Compressed**: ~23 kB gzipped
