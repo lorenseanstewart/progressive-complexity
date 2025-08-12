@@ -9,6 +9,7 @@ export class TableHeader extends LitElement {
   }
 
   private debounceTimer: number | null = null;
+  private _isFirstUpdate = true;
 
   @property({ type: String, attribute: "label" }) label: string = "";
   @property({ type: String, attribute: "field" }) field:
@@ -22,6 +23,23 @@ export class TableHeader extends LitElement {
     "asc";
   @property({ type: String, attribute: "search-term" }) searchTerm: string = "";
   @property({ type: String }) limit: string = "10";
+
+  connectedCallback() {
+    super.connectedCallback();
+    this._isFirstUpdate = true;
+  }
+
+  willUpdate() {
+    // Only clear content on first update after connection
+    // This prevents duplication from cached HTML whe a user
+    // presses the back for forward buttons on the browser
+    if (this._isFirstUpdate) {
+      while (this.firstChild) {
+        this.removeChild(this.firstChild);
+      }
+      this._isFirstUpdate = false;
+    }
+  }
 
   private buildUrl(params: Record<string, string>): string {
     const url = new URL(window.location.href);
