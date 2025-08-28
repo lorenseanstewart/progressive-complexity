@@ -8,7 +8,7 @@ export interface Props {
   total: number;
   page: number;
   pageSize: number;
-  sort: keyof Product | 'subtotal';
+  sort: keyof Product | "subtotal";
   sortDir: SortOrder;
   searchTerm: string;
 }
@@ -69,7 +69,18 @@ const nextHref = `/?page=${nextPage}&limit=${pageSize}&sortBy=${sort}&sortOrder=
         </tr>
       </thead>
       <tbody>
-        {data.map((product) => <ProductRow product={product} page={page} pageSize={pageSize} sort={sort} sortDir={sortDir} searchTerm={searchTerm} />)}
+        {
+          data.map((product) => (
+            <ProductRow
+              product={product}
+              page={page}
+              pageSize={pageSize}
+              sort={sort}
+              sortDir={sortDir}
+              searchTerm={searchTerm}
+            />
+          ))
+        }
       </tbody>
     </table>
 

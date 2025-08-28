@@ -33,6 +33,19 @@ const buildEditUrl = (productId: number, field: string) => {
   return `/api/products/${productId}/${field}${queryString ? "?" + queryString : ""}`;
 };
 
+// Helper function to build delete URL with all table state
+const buildDeleteUrl = (productId: number) => {
+  const params = new URLSearchParams();
+  if (page !== 1) params.set("page", page.toString());
+  if (pageSize !== 10) params.set("limit", pageSize.toString());
+  if (sort !== "id") params.set("sortBy", sort);
+  if (sortDir !== "asc") params.set("sortOrder", sortDir);
+  if (searchTerm) params.set("searchTerm", searchTerm);
+
+  const queryString = params.toString();
+  return `/api/products/${productId}${queryString ? "?" + queryString : ""}`;
+};
+
 const subtotal = product.price * product.quantity;
 ---
 
@@ -128,7 +141,7 @@ const subtotal = product.price * product.quantity;
   <td>
     <button
       class="btn btn-error btn-sm"
-      hx-delete={`/api/products/${product.id}`}
+      hx-delete={buildDeleteUrl(product.id)}
       hx-target="#table-wrapper"
       hx-swap="outerHTML swap:500ms"
       hx-select="#table-wrapper"
