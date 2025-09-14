@@ -731,9 +731,9 @@ return (
 
 ### Bundle Analysis
 
-- **Total JavaScript**: 70.4 kB uncompressed (production build)
-  - App code: 23.4 kB (dist/client/\_astro/index.astro_astro_type_script_index_0_lang.c5_czJvM.js)
-  - HTMX: 47.0 kB (dist/client/\_astro/htmx.min.DCFpGa93.js)
+- **Total JavaScript**: 70.4 kB uncompressed
+  - HTMX: 47.0 kB
+  - hx-optimistic (minified): 8.4 kB
 - **TypeScript Implementation**:
   - **37 lines** of clean type definitions in `/src/types/index.ts`
   - **186 lines** of typed utilities in `/src/lib/page-utils.ts`
