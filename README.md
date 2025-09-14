@@ -13,6 +13,8 @@ npm install     # Install dependencies
 npm run dev     # Start development server (port 4322)
 ```
 
+This installs key dependencies including htmx.org for dynamic interactions and hx-optimistic for optimistic UI updates.
+
 ## 📊 View Accurate Bundle Sizes
 
 ⚠️ **Important**: `npm run dev` includes development tools (Astro toolbar, HMR, etc.) that add ~1MB+ of JavaScript.
@@ -207,6 +209,63 @@ In `PriceCell.astro` and `QuantityCell.astro`:
 ```
 
 Global templates in `Layout.astro` use set:html to output literal placeholders.
+
+Here is the hx-optimistic template code:
+
+```html
+<template id="hxopt-tpl-price">
+  <span
+    class="view optimistic-update"
+    id={"view-price-" + "${data:id}"}
+    tabindex="0"
+    aria-live="polite"
+    aria-atomic="true"
+    onclick={`
+      window.pageUtils.toggleEdit(${"${data:id}"}, true, 'price')
+    `}
+    onkeydown={`
+      if (event.key === 'Enter' || event.key === ' ') {
+        window.pageUtils.toggleEdit(${"${data:id}"}, true, 'price');
+        event.preventDefault();
+      }
+    `}
+    >{"${this.value}"}</span
+  >
+</template>
+<template id="hxopt-tpl-price-error">
+  <span
+    class="view text-error"
+    id={"view-price-" + "${data:id}"}
+    >Error</span
+  >
+</template>
+<template id="hxopt-tpl-qty">
+  <span
+    class="view optimistic-update"
+    id={"view-qty-" + "${data:id}"}
+    tabindex="0"
+    aria-live="polite"
+    aria-atomic="true"
+    onclick={`
+      window.pageUtils.toggleEdit(${"${data:id}"}, true, 'quantity')
+    `}
+    onkeydown={`
+      if (event.key === 'Enter' || event.key === ' ') {
+        window.pageUtils.toggleEdit(${"${data:id}"}, true, 'quantity');
+        event.preventDefault();
+      }
+    `}
+    >{"${this.value}"}</span
+  >
+</template>
+<template id="hxopt-tpl-qty-error">
+  <span
+    class="view text-error"
+    id={"view-qty-" + "${data:id}"}
+    >Error</span
+  >
+</template>
+```
 
 In `page-utils.ts`, prevent error swaps and ensure view mode:
 
@@ -441,6 +500,7 @@ declare global {
     };
   }
 }
+```
 
 ### CSS Architecture
 
@@ -671,16 +731,15 @@ return (
 
 ### Bundle Analysis
 
-- **Total JavaScript**: ~70 kB uncompressed (production build)
-  - App code: ~23 kB (utilities and components)
-  - HTMX: ~47 kB (framework replacement)
+- **Total JavaScript**: 70.4 kB uncompressed (production build)
+  - App code: 23.4 kB (dist/client/\_astro/index.astro_astro_type_script_index_0_lang.c5_czJvM.js)
+  - HTMX: 47.0 kB (dist/client/\_astro/htmx.min.DCFpGa93.js)
 - **TypeScript Implementation**:
-  - **~37 lines** of clean type definitions in `/src/types/index.ts`
-  - **~291 lines** of typed utilities in `/src/lib/page-utils.ts`
+  - **37 lines** of clean type definitions in `/src/types/index.ts`
+  - **186 lines** of typed utilities in `/src/lib/page-utils.ts`
   - **Full type coverage** across store, API utilities, and formatting
   - **Simple, effective type safety** without complexity overhead
-- **Compressed**: ~23 kB gzipped
-- **Comparison**: Smaller than most React starter templates with better type safety
+- **Compressed**: 23.3 kB gzipped
 
 > ⚠️ **Measurement Note**: Run `npm run build && npm run report` to see actual production sizes. The dev server (`npm run dev`) includes development tools that don't ship to production.
 
