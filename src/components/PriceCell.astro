@@ -1,0 +1,46 @@
+---
+import { formatCurrency } from "../lib/format";
+import type { Product } from "../types";
+
+export interface Props {
+  product: Product;
+  isEdit?: boolean;
+}
+
+const { product, isEdit = false } = Astro.props;
+---
+
+<span
+  class="view"
+  id={`view-price-${product.id}`}
+  tabindex="0"
+  aria-live="polite"
+  aria-atomic="true"
+  hx-on:click={`window.pageUtils.toggleEdit(${product.id}, true, 'price')`}
+  onkeydown={`if(event.key==='Enter'||event.key===' '){window.pageUtils.toggleEdit(${product.id}, true, 'price');event.preventDefault();}`}
+>
+  {formatCurrency(product.price)}
+</span>
+<span class="edit hidden">
+  <input
+    name="price"
+    type="number"
+    step="0.01"
+    value={product.price}
+    hx-ext="optimistic"
+    hx-patch={`/api/products/${product.id}/price`}
+    hx-target={`#price-cell-${product.id}`}
+    hx-swap="innerHTML"
+    hx-select-oob={`#totals-summary, #view-sub-${product.id}`}
+    hx-push-url="false"
+    hx-trigger="keyup[key=='Enter'] changed, blur changed"
+    onkeydown="window.pageUtils.cancelOnEscape(event,this)"
+    onkeyup="if(event.key==='Enter') window.pageUtils.exitEditModeAfterSubmit(this)"
+    onblur="window.pageUtils.exitEditModeAfterSubmit(this)"
+    data-id={String(product.id)}
+    data-optimistic={JSON.stringify({
+      template: `#hxopt-tpl-price`,
+      errorTemplate: `#hxopt-tpl-price-error`,
+    })}
+  />
+</span>

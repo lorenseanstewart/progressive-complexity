@@ -4,10 +4,9 @@ import { formatCurrency } from "../lib/format";
 
 export interface Props {
   totals: ProductTotals;
-  isOob?: boolean;
 }
 
-const { totals, isOob = false } = Astro.props;
+const { totals } = Astro.props;
 ---
 
 <div
@@ -15,7 +14,7 @@ const { totals, isOob = false } = Astro.props;
   id="totals-summary"
   role="status"
   aria-live="polite"
-  hx-swap-oob={isOob ? "true" : undefined}
+  hx-swap-oob="true"
 >
   <div class="stat">
     <div class="stat-title">Total Items</div>

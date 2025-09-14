@@ -97,6 +97,10 @@ export function getAllTotals(): ProductTotals {
   return getTotals(db);
 }
 
+export function getProductById(id: number): ProductWithCurrency | undefined {
+  return db.find((p) => p.id === id);
+}
+
 export function updateProductField(
   id: number,
   field: 'price' | 'quantity',
@@ -106,7 +110,7 @@ export function updateProductField(
   if (!product) {
     throw new Error(`Product with id ${id} not found`);
   }
-  
+
   if (field === 'price') {
     if (value < 0) {
       throw new Error('Price cannot be negative');
@@ -118,7 +122,7 @@ export function updateProductField(
     }
     product.quantity = Math.max(0, Math.floor(value));
   }
-  
+
   return product;
 }
 

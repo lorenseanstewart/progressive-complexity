@@ -53,61 +53,6 @@ export function toggleEdit(
   }
 }
 
-export function handleOptimisticUpdate(input: HTMLInputElement): void {
-  const tr = input.closest("tr") as HTMLTableRowElement | null;
-  if (!tr) return;
-
-  const key: "price" | "quantity" =
-    input.name === "quantity" ? "quantity" : "price";
-  const id: string = tr.id.replace("row-", "");
-
-  const focusInfo: FocusInfo = { id, field: key };
-  (window as any).__lastFocus = focusInfo;
-
-  const fieldName = key === "quantity" ? "qty" : "price";
-  const viewElement = document.getElementById(`view-${fieldName}-${id}`);
-  const editElement = input.closest(".edit") as HTMLElement | null;
-  const subtotalElement = document.getElementById(`view-sub-${id}`);
-  const errorContainer = document.getElementById(`error-${id}-${key}`);
-  if (errorContainer) {
-    errorContainer.textContent = "";
-  }
-
-  if (viewElement && editElement) {
-    const newValue = input.value;
-
-    if (key === "price") {
-      viewElement.textContent = formatCurrency(parseFloat(newValue));
-    } else {
-      viewElement.textContent = newValue;
-    }
-
-    viewElement.classList.add("optimistic-update");
-
-    editElement.style.display = "none";
-    viewElement.style.display = "";
-  }
-
-  if (subtotalElement) {
-    const price =
-      key === "price"
-        ? parseFloat(input.value)
-        : parseFloat(tr.getAttribute("data-price") || "0");
-    const quantity =
-      key === "quantity"
-        ? parseInt(input.value)
-        : parseInt(tr.getAttribute("data-quantity") || "0");
-    const newSubtotal = price * quantity;
-    subtotalElement.textContent = formatCurrency(newSubtotal);
-    subtotalElement.classList.add("optimistic-update");
-  }
-
-  const totalAmount = document.getElementById("total-amount");
-  const totalItems = document.getElementById("total-items");
-  if (totalAmount) totalAmount.classList.add("optimistic-update");
-  if (totalItems) totalItems.classList.add("optimistic-update");
-}
-
 export function exitEditMode(input: HTMLInputElement): void {
   const tr = input.closest("tr");
   if (!tr) return;
@@ -123,11 +68,28 @@ export function exitEditMode(input: HTMLInputElement): void {
   }
 }
 
+export function exitEditModeAfterSubmit(input: HTMLInputElement): void {
+  const originalValue = input.defaultValue || input.getAttribute("value");
+  const currentValue = input.value;
+
+  // Only exit edit mode if the value has changed (triggering a submit)
+  // If the value hasn't changed, we need to exit edit mode manually
+  if (originalValue === currentValue) {
+    exitEditMode(input);
+  }
+  // If value changed, hx-optimistic will handle the UI update
+}
+
 export function cancelOnEscape(
   evt: KeyboardEvent,
   input: HTMLInputElement,
 ): void {
   if (evt.key !== "Escape") return;
+
+  // Reset the input value to original
+  const originalValue = input.defaultValue || input.getAttribute("value") || "";
+  input.value = originalValue;
+
   exitEditMode(input);
 
   const tr = input.closest("tr");
@@ -136,31 +98,6 @@ export function cancelOnEscape(
   const field = input.name === "quantity" ? "qty" : "price";
   const viewSpan = document.getElementById(`view-${field}-${id}`);
   if (viewSpan) viewSpan.focus();
-}
-
-export function handleEnterOptimistic(
-  event: KeyboardEvent,
-  input: HTMLInputElement,
-): void {
-  if (event.key !== "Enter") return;
-
-  const originalValue = input.defaultValue || input.getAttribute("value");
-  const currentValue = input.value;
-
-  if (originalValue !== currentValue) {
-    handleOptimisticUpdate(input);
-  }
-}
-
-export function handleBlurOptimistic(input: HTMLInputElement): void {
-  const originalValue = input.defaultValue || input.getAttribute("value");
-  const currentValue = input.value;
-
-  if (originalValue !== currentValue) {
-    handleOptimisticUpdate(input);
-  } else {
-    exitEditMode(input);
-  }
 }
 
 export function restoreFocus(): void {
@@ -182,97 +119,18 @@ export function restoreFocus(): void {
   (window as any).__lastFocus = null;
 }
 
-function handleResponseError(input: HTMLInputElement, event: any): void {
-  if (event.detail.xhr && event.detail.xhr.status === 500) {
-    const tr = input.closest("tr");
-    if (tr) {
-      const productId = tr.id.replace("row-", "");
-      const fieldType = input.name;
-      const viewElement = document.getElementById(
-        `view-${fieldType === "price" ? "price" : "qty"}-${productId}`,
-      );
-
-      if (viewElement) viewElement.classList.remove("optimistic-update");
-      const subtotalElement = document.getElementById(`view-sub-${productId}`);
-      if (subtotalElement)
-        subtotalElement.classList.remove("optimistic-update");
-      const totalAmount = document.getElementById("total-amount");
-      const totalItems = document.getElementById("total-items");
-      if (totalAmount) totalAmount.classList.remove("optimistic-update");
-      if (totalItems) totalItems.classList.remove("optimistic-update");
-
-      if (viewElement) {
-        viewElement.classList.add("text-error");
-        viewElement.textContent = "Error";
-      }
-
-      setTimeout(() => {
-        const originalValue =
-          input.defaultValue || input.getAttribute("value") || "";
-        input.value = originalValue;
-        if (viewElement) {
-          if (fieldType === "price") {
-            viewElement.textContent = formatCurrency(parseFloat(originalValue));
-          } else {
-            viewElement.textContent = originalValue;
-          }
-          setTimeout(() => {
-            viewElement.classList.remove("text-error");
-          }, 1000);
-        }
-        if (subtotalElement) {
-          const price = parseFloat(tr.getAttribute("data-price") || "0");
-          const quantity = parseInt(tr.getAttribute("data-quantity") || "0");
-          const originalSubtotal = price * quantity;
-          subtotalElement.textContent = formatCurrency(originalSubtotal);
-        }
-      }, 1000);
-    }
-  }
-}
-
-/*
- * Error handling for HTMX 500 responses (e.g., price = 99.99 demo error)
- * Due to HTMX limitations, inline hx-on: attributes don't work reliably for error events,
- * so we must use global event listeners. This tracks the input making a request and
- * handles the error response by showing "Error" text and reverting the value.
- */
-let lastRequestInput: HTMLInputElement | null = null;
-
-// Store the input when a request is made
-document.body.addEventListener("htmx:beforeRequest", (evt: any) => {
-  if (evt.target && evt.target.tagName === "INPUT") {
-    lastRequestInput = evt.target;
-  }
-});
-
-// Handle 500 errors by preventing swap and showing error state
-document.body.addEventListener("htmx:beforeSwap", (evt: any) => {
-  if (evt.detail.xhr?.status === 500) {
-    evt.detail.shouldSwap = false; // Prevent HTMX from replacing the table
-
-    if (lastRequestInput) {
-      handleResponseError(lastRequestInput, evt);
-      lastRequestInput = null;
-    }
-  }
-});
-
 // Define the global pageUtils interface for type safety
 declare global {
   interface Window {
     pageUtils: {
       toggleEdit: typeof toggleEdit;
-      handleOptimisticUpdate: typeof handleOptimisticUpdate;
-      handleEnterOptimistic: typeof handleEnterOptimistic;
-      handleBlurOptimistic: typeof handleBlurOptimistic;
+      exitEditMode: typeof exitEditMode;
+      exitEditModeAfterSubmit: typeof exitEditModeAfterSubmit;
       restoreFocus: typeof restoreFocus;
       cancelOnEscape: typeof cancelOnEscape;
-      exitEditMode: typeof exitEditMode;
       formatCurrency: typeof formatCurrency;
     };
     __lastFocus: FocusInfo | null;
-    __lastRequestInput: HTMLInputElement | null;
   }
 }
 
@@ -280,11 +138,48 @@ declare global {
 // we can use them in html (Astro components in this case)
 window.pageUtils = {
   toggleEdit,
-  handleOptimisticUpdate,
-  handleEnterOptimistic,
-  handleBlurOptimistic,
+  exitEditMode,
+  exitEditModeAfterSubmit,
   restoreFocus,
   cancelOnEscape,
-  exitEditMode,
   formatCurrency,
 };
+
+document.body.addEventListener("htmx:beforeSwap", (evt: any) => {
+  const status = evt?.detail?.xhr?.status;
+  if (typeof status === "number" && status >= 400) {
+    evt.detail.shouldSwap = false;
+  }
+});
+
+function ensureViewModeForTarget(targetEl: HTMLElement): void {
+  if (!targetEl) return;
+  const targetId = targetEl.id || "";
+  const isPrice = targetId.startsWith("price-cell-");
+  const isQty = targetId.startsWith("qty-cell-");
+  if (!isPrice && !isQty) return;
+
+  const id = targetId.replace("price-cell-", "").replace("qty-cell-", "");
+  const tr = document.getElementById(`row-${id}`);
+  if (!tr) return;
+
+  const cell = isPrice
+    ? (tr.querySelector(`#price-cell-${id}`) as HTMLElement | null)
+    : (tr.querySelector(`#qty-cell-${id}`) as HTMLElement | null);
+  if (!cell) return;
+
+  const viewEl = cell.querySelector(".view") as HTMLElement | null;
+  const editEl = cell.querySelector(".edit") as HTMLElement | null;
+  if (viewEl) viewEl.style.display = "";
+  if (editEl) editEl.style.display = "none";
+}
+
+document.body.addEventListener("optimistic:error", (evt: any) => {
+  const targetEl = (evt?.target || null) as HTMLElement | null;
+  if (targetEl) ensureViewModeForTarget(targetEl);
+});
+
+document.body.addEventListener("optimistic:reverted", (evt: any) => {
+  const targetEl = (evt?.target || null) as HTMLElement | null;
+  if (targetEl) ensureViewModeForTarget(targetEl);
+});

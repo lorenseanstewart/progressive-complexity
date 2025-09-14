@@ -10,18 +10,19 @@ export interface Props {
   totals: ProductTotals;
   page: number;
   pageSize: number;
-  sort: keyof Product | 'subtotal';
+  sort: keyof Product | "subtotal";
   sortDir: SortOrder;
   searchTerm: string;
 }
 
-const { data, total, totals, page, pageSize, sort, sortDir, searchTerm } = Astro.props;
+const { data, total, totals, page, pageSize, sort, sortDir, searchTerm } =
+  Astro.props;
 ---
 
 <!-- OOB swap for totals -->
-<TotalsSummary totals={totals} isOob={true} />
+<TotalsSummary totals={totals} />
 
-<HomePageTable 
+<HomePageTable
   data={data}
   total={total}
   page={page}

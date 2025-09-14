@@ -1,5 +1,6 @@
 ---
 import htmxUrl from "htmx.org/dist/htmx.min.js?url";
+import hxOptimisticUrl from "hx-optimistic/hx-optimistic.min.js?url";
 import UserWelcome from "../components/UserWelcome.astro";
 
 const { title = "Progressive Complexity Demo", enableHtmx = true } =
@@ -25,13 +26,74 @@ const { title = "Progressive Complexity Demo", enableHtmx = true } =
       content="A demo of progressive complexity"
     />
     <title>{title}</title>
+    {
+      enableHtmx && (
+        <meta
+          name="htmx-config"
+          content='{"useTemplateFragments":true}'
+        />
+      )
+    }
     {enableHtmx && <script src={htmxUrl} />}
+    {enableHtmx && <script src={hxOptimisticUrl} />}
   </head>
   <body class="min-h-screen bg-base-100">
     <UserWelcome />
     <div class="container mx-auto p-6 max-w-7xl">
       <slot />
     </div>
+    <template id="hxopt-tpl-price">
+      <span
+        class="view optimistic-update"
+        id={"view-price-" + "${data:id}"}
+        tabindex="0"
+        aria-live="polite"
+        aria-atomic="true"
+        onclick={`
+          window.pageUtils.toggleEdit(${"${data:id}"}, true, 'price')
+        `}
+        onkeydown={`
+          if (event.key === 'Enter' || event.key === ' ') {
+            window.pageUtils.toggleEdit(${"${data:id}"}, true, 'price');
+            event.preventDefault();
+          }
+        `}
+        >{"${this.value}"}</span
+      >
+    </template>
+    <template id="hxopt-tpl-price-error">
+      <span
+        class="view text-error"
+        id={"view-price-" + "${data:id}"}
+        >Error</span
+      >
+    </template>
+    <template id="hxopt-tpl-qty">
+      <span
+        class="view optimistic-update"
+        id={"view-qty-" + "${data:id}"}
+        tabindex="0"
+        aria-live="polite"
+        aria-atomic="true"
+        onclick={`
+          window.pageUtils.toggleEdit(${"${data:id}"}, true, 'quantity')
+        `}
+        onkeydown={`
+          if (event.key === 'Enter' || event.key === ' ') {
+            window.pageUtils.toggleEdit(${"${data:id}"}, true, 'quantity');
+            event.preventDefault();
+          }
+        `}
+        >{"${this.value}"}</span
+      >
+    </template>
+    <template id="hxopt-tpl-qty-error">
+      <span
+        class="view text-error"
+        id={"view-qty-" + "${data:id}"}
+        >Error</span
+      >
+    </template>
   </body>
 </html>
 

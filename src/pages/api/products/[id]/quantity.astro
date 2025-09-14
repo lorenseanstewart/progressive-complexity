@@ -1,7 +1,9 @@
 ---
-import { updateProductField } from "../../../../lib/store";
+import { updateProductField, getProductById } from "../../../../lib/store";
+import { formatCurrency } from "../../../../lib/format";
 import { parseApiParams, getTableData } from "../../../../lib/api-utils";
-import ApiResponse from "../../../../components/ApiResponse.astro";
+import QuantityCell from "../../../../components/QuantityCell.astro";
+import TotalsSummary from "../../../../components/TotalsSummary.astro";
 
 const id = Number(Astro.params.id);
 const formData = await Astro.request.formData();
@@ -13,20 +15,33 @@ try {
   return new Response("Error updating product", { status: 500 });
 }
 
+// Get updated product and calculate new subtotal
+const product = getProductById(id);
+if (!product) {
+  return new Response("Product not found", { status: 404 });
+}
+
+const subtotal = product.price * product.quantity;
+
+// Get updated totals for OOB swap
 const params = parseApiParams(Astro.request);
-const { data, total, totals } = getTableData(params);
+const { totals } = getTableData(params);
 
 // Set response headers for HTMX
 Astro.response.headers.set("Content-Type", "text/html");
 ---
 
-<ApiResponse 
-  data={data}
-  total={total}
-  totals={totals}
-  page={params.page}
-  pageSize={params.pageSize}
-  sort={params.sort}
-  sortDir={params.sortDir}
-  searchTerm={params.searchTerm}
-/>
+<!-- Main response: the updated quantity cell content -->
+<QuantityCell product={product} />
+
+<!-- OOB swap for subtotal -->
+<span
+  class="view"
+  id={`view-sub-${id}`}
+  hx-swap-oob="outerHTML"
+>
+  {formatCurrency(subtotal)}
+</span>
+
+<!-- OOB swap for totals -->
+<TotalsSummary totals={totals} />

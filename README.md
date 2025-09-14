@@ -1,6 +1,6 @@
 # Progressive Complexity Demo - Technical Implementation
 
-> **See the [Progressive Complexity Manifesto]([progressive-complexity-manifesto.md](https://www.lorenstew.art/blog/progressive-complexity-manifesto)) for the philosophy and high-level overview**
+> **See the [Progressive Complexity Manifesto](<[progressive-complexity-manifesto.md](https://www.lorenstew.art/blog/progressive-complexity-manifesto)>) for the philosophy and high-level overview**
 
 https://www.lorenstew.art/blog/progressive-complexity-manifesto
 
@@ -51,6 +51,7 @@ Then check the Network tab or run `npm run report` to see the actual production 
 - **DaisyUI + Tailwind**: Styling with semantic color classes
 - **TypeScript**: Type safety for utilities and components
 - **Lit**: Web Components for complex table headers (Level 4 escalation)
+- **hx-optimistic**: HTMX extension for optimistic UI updates
 
 ### Progressive Complexity Levels Used
 
@@ -183,127 +184,56 @@ const { data } = getProducts({ /* current page params */ });
 
 #### The Flow
 
-1. **User action** (blur/enter on input) triggers optimistic update
-2. **Immediate feedback** (pink color, updated display)
+1. **User action** (blur/enter on input) triggers optimistic update via hx-optimistic
+2. **Immediate feedback** (pink color, updated display using template)
 3. **HTMX request** happens in background
-4. **Server response** replaces optimistic display with authoritative data
+4. **Server response** replaces optimistic display with authoritative data or triggers error template on failure
 
 > ⚠️ **Network throttling recommended**: Use DevTools to throttle to "Slow 4G" to see the pink optimistic state before server confirmation.
 
 #### Implementation
 
-```typescript
-// /src/lib/page-utils.ts
-export function handleOptimisticUpdate(input: HTMLInputElement): void {
-  const tr = input.closest("tr");
-  const id = tr.id.replace("row-", "");
-  const key: "price" | "quantity" =
-    input.name === "quantity" ? "quantity" : "price";
-
-  // Store reference for error handling
-  (window as any).__lastRequestInput = input;
-
-  // Find display elements
-  const fieldName = key === "quantity" ? "qty" : "price";
-  const viewElement = document.getElementById(`view-${fieldName}-${id}`);
-
-  if (viewElement) {
-    // Update display immediately
-    const newValue = input.value;
-    if (key === "price") {
-      viewElement.textContent = formatCurrency(parseFloat(newValue));
-    } else {
-      viewElement.textContent = newValue;
-    }
-
-    // Add pink color for visual feedback
-    viewElement.classList.add("optimistic-update");
-
-    // Switch to view mode
-    exitEditMode(input);
-  }
-
-  // Update subtotals and totals optimistically
-  const subtotalElement = document.getElementById(`view-sub-${id}`);
-  if (subtotalElement) {
-    const price =
-      key === "price"
-        ? parseFloat(newValue)
-        : parseFloat(tr.getAttribute("data-price") || "0");
-    const quantity =
-      key === "quantity"
-        ? parseInt(newValue)
-        : parseInt(tr.getAttribute("data-quantity") || "0");
-    const newSubtotal = price * quantity;
-    subtotalElement.textContent = formatCurrency(newSubtotal);
-    subtotalElement.classList.add("optimistic-update");
-  }
-}
-```
-
-#### HTML Integration
+In `PriceCell.astro` and `QuantityCell.astro`:
 
 ```html
 <input
-  hx-patch="/api/products/1/price"
-  onblur="window.pageUtils.handleBlurOptimistic(this)"
-  onkeyup="if(event.key==='Enter') window.pageUtils.handleEnterOptimistic(event, this)"
+  hx-ext="optimistic"
+  data-id={String(product.id)}
+  data-optimistic={JSON.stringify({
+    template: `#hxopt-tpl-price`,
+    errorTemplate: `#hxopt-tpl-price-error`,
+  })}
 />
+```
+
+Global templates in `Layout.astro` use set:html to output literal placeholders.
+
+In `page-utils.ts`, prevent error swaps and ensure view mode:
+
+```typescript
+document.body.addEventListener("htmx:beforeSwap", (evt: any) => {
+  const status = evt?.detail?.xhr?.status;
+  if (typeof status === "number" && status >= 400) {
+    evt.detail.shouldSwap = false;
+  }
+});
+
+document.body.addEventListener("optimistic:error", (evt: any) => {
+  const targetEl = (evt?.target || null) as HTMLElement | null;
+  if (targetEl) ensureViewModeForTarget(targetEl);
+});
+
+document.body.addEventListener("optimistic:reverted", (evt: any) => {
+  const targetEl = (evt?.target || null) as HTMLElement | null;
+  if (targetEl) ensureViewModeForTarget(targetEl);
+});
 ```
 
 ### Error Handling
 
-#### Visual Error States
+hx-optimistic handles errors using the errorTemplate, showing "Error" briefly before reverting to the previous value after a delay. The server remains the source of truth.
 
-When server returns 500 status (e.g., price = 99.99):
-
-```typescript
-// Handle 500 errors by preventing swap and showing error state
-document.body.addEventListener("htmx:beforeSwap", (evt: any) => {
-  if (evt.detail.xhr?.status === 500) {
-    evt.detail.shouldSwap = false; // Prevent HTMX from replacing the table
-
-    if (lastRequestInput) {
-      const tr = lastRequestInput.closest("tr");
-      if (tr) {
-        const productId = tr.id.replace("row-", "");
-        const fieldType = lastRequestInput.name;
-        const viewElement = document.getElementById(
-          `view-${fieldType === "price" ? "price" : "qty"}-${productId}`,
-        );
-
-        if (viewElement) {
-          viewElement.classList.add("text-error");
-          viewElement.textContent = "Error";
-        }
-
-        // Revert after 1 second
-        setTimeout(() => {
-          const originalValue = lastRequestInput.defaultValue || "";
-          lastRequestInput.value = originalValue;
-          if (viewElement && fieldType === "price") {
-            viewElement.textContent = formatCurrency(parseFloat(originalValue));
-          } else if (viewElement) {
-            viewElement.textContent = originalValue;
-          }
-          setTimeout(() => {
-            if (viewElement) viewElement.classList.remove("text-error");
-          }, 1000);
-        }, 1000);
-      }
-      lastRequestInput = null;
-    }
-  }
-});
-```
-
-**Error Flow:**
-
-1. Server rejects update (returns 500)
-2. Field immediately shows "Error" in red
-3. After 1 second: reverts to original value
-4. After 2 seconds: removes red coloring
-5. User learns the boundary through interaction
+When server returns 500 status (e.g., price = 99.99), htmx:beforeSwap prevents the swap, allowing hx-optimistic to display the error template and revert.
 
 ### Web Components (Level 4)
 

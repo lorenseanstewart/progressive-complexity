@@ -113,9 +113,13 @@ export class TableHeader extends LitElement {
     const down = this.sortBy === this.field && this.sortDir === "desc";
 
     return html`
-      <div class="flex items-center gap-2">
+      <div
+        class="flex items-center gap-2 ${this.label === "Name"
+          ? "justify-start"
+          : "justify-end"}"
+      >
         <a
-          class="btn btn-ghost btn-xs normal-case font-normal justify-start cursor-pointer"
+          class="btn btn-ghost btn-xs normal-case font-normal cursor-pointer"
           href=${this.getSortUrl()}
           hx-get=${this.getSortUrl()}
           hx-target="#table-wrapper"
