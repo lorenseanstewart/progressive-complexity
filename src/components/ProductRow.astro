@@ -45,10 +45,18 @@ const subtotal = product.price * product.quantity;
 >
   <td>{product.id}</td>
   <td>{product.name}</td>
-  <td class="right" hx-ext="optimistic" id={`price-cell-${product.id}`}>
+  <td
+    class="right"
+    hx-ext="optimistic"
+    id={`price-cell-${product.id}`}
+  >
     <PriceCell product={product} />
   </td>
-  <td class="right" hx-ext="optimistic" id={`qty-cell-${product.id}`}>
+  <td
+    class="right"
+    hx-ext="optimistic"
+    id={`qty-cell-${product.id}`}
+  >
     <QuantityCell product={product} />
   </td>
   <td class="right">
@@ -59,7 +67,7 @@ const subtotal = product.price * product.quantity;
       {formatCurrency(subtotal)}
     </span>
   </td>
-  <td>
+  <td class="right">
     <button
       class="btn btn-error btn-sm"
       hx-delete={buildDeleteUrl(product.id)}
