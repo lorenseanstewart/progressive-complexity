@@ -36,6 +36,9 @@ const { title = "Progressive Complexity Demo", enableHtmx = true } =
     }
     {enableHtmx && <script src={htmxUrl} />}
     {enableHtmx && <script src={hxOptimisticUrl} />}
+    <script>
+      import "../lib/page-utils.ts";
+    </script>
   </head>
   <body class="min-h-screen bg-base-100">
     <UserWelcome />
@@ -138,14 +141,6 @@ const { title = "Progressive Complexity Demo", enableHtmx = true } =
     @apply text-right;
   }
 
-  /* Edit mode styles */
-  .edit {
-    @apply hidden;
-  }
-
-  .view {
-    @apply inline-block;
-  }
 
   /* Optimistic update visual feedback */
   .optimistic-update {

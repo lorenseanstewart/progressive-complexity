@@ -1,4 +1,14 @@
+/// <reference path="../types/global.d.ts" />
 import { formatCurrency } from "./format";
+import {
+  getElementById,
+  querySelector,
+  toggleElements,
+  focusInput,
+  getRowId,
+  getCellElement,
+  getTableCell,
+} from "./dom-utils";
 
 interface FocusInfo {
   id: string;
@@ -10,7 +20,9 @@ export function toggleEdit(
   editing: boolean,
   field: "price" | "quantity" | null = null,
 ): void {
-  const tr = document.getElementById(`row-${id}`);
+  if (typeof document === 'undefined') return;
+
+  const tr = getElementById<HTMLTableRowElement>(`row-${id}`);
   if (!tr) return;
 
   if (field) {
@@ -20,55 +32,43 @@ export function toggleEdit(
     };
     const fieldId = fieldIdMap[field] || field;
 
-    const cell = tr
-      .querySelector(`#view-${fieldId}-${id}`)
-      ?.closest("td") as HTMLTableCellElement | null;
+    const cell = querySelector<HTMLTableCellElement>(
+      `#view-${fieldId}-${id}`,
+      tr
+    )?.closest("td") as HTMLTableCellElement | null;
 
     if (cell) {
-      const viewEl = cell.querySelector(".view") as HTMLElement | null;
-      const editEl = cell.querySelector(".edit") as HTMLElement | null;
+      const viewEl = querySelector<HTMLElement>(".view", cell);
+      const editEl = querySelector<HTMLElement>(".edit", cell);
 
-      if (viewEl && editEl) {
-        if (editing) {
-          viewEl.style.display = "none";
-          editEl.style.display = "block";
-        } else {
-          viewEl.style.display = "block";
-          editEl.style.display = "none";
-        }
-
-        if (editing) {
-          const input = editEl.querySelector(
-            "input",
-          ) as HTMLInputElement | null;
-          if (input) {
-            requestAnimationFrame(() => {
-              input.focus();
-              input.select();
-            });
-          }
-        }
+      if (editing) {
+        toggleElements(editEl, viewEl);
+        const input = querySelector<HTMLInputElement>("input", editEl || cell);
+        focusInput(input);
+      } else {
+        toggleElements(viewEl, editEl);
       }
     }
   }
 }
 
 export function exitEditMode(input: HTMLInputElement): void {
-  const tr = input.closest("tr");
-  if (!tr) return;
+  if (typeof document === 'undefined') return;
 
-  const id = tr.id.replace("row-", "");
+  const id = getRowId(input);
+  if (!id) return;
+
   const field = input.name === "quantity" ? "qty" : "price";
-  const viewSpan = document.getElementById(`view-${field}-${id}`);
+  const viewSpan = getElementById(`view-${field}-${id}`);
   const editSpan = input.closest(".edit") as HTMLElement | null;
 
-  if (viewSpan && editSpan) {
-    viewSpan.style.display = "";
-    editSpan.style.display = "none";
-  }
+  toggleElements(viewSpan, editSpan);
 }
 
 export function exitEditModeAfterSubmit(input: HTMLInputElement): void {
+  // Only run in browser environment
+  if (typeof document === 'undefined') return;
+
   const originalValue = input.defaultValue || input.getAttribute("value");
   const currentValue = input.value;
 
@@ -84,6 +84,7 @@ export function cancelOnEscape(
   evt: KeyboardEvent,
   input: HTMLInputElement,
 ): void {
+  if (typeof document === 'undefined') return;
   if (evt.key !== "Escape") return;
 
   // Reset the input value to original
@@ -92,94 +93,82 @@ export function cancelOnEscape(
 
   exitEditMode(input);
 
-  const tr = input.closest("tr");
-  if (!tr) return;
-  const id = tr.id.replace("row-", "");
+  const id = getRowId(input);
+  if (!id) return;
+
   const field = input.name === "quantity" ? "qty" : "price";
-  const viewSpan = document.getElementById(`view-${field}-${id}`);
+  const viewSpan = getElementById(`view-${field}-${id}`);
   if (viewSpan) viewSpan.focus();
 }
 
 export function restoreFocus(): void {
-  const info = (window as any).__lastFocus as FocusInfo | null;
+  if (typeof window === 'undefined') return;
+
+  const info = window.__lastFocus;
   if (!info) return;
 
-  const tr = document.getElementById(`row-${info.id}`);
+  const tr = getElementById<HTMLTableRowElement>(`row-${info.id}`);
   if (!tr) return;
 
-  const view =
-    info.field === "price"
-      ? (tr.querySelector(`#view-price-${info.id}`) as HTMLElement | null)
-      : (tr.querySelector(`#view-qty-${info.id}`) as HTMLElement | null);
+  const fieldType = info.field === "price" ? "price" : "qty";
+  const view = querySelector<HTMLElement>(`#view-${fieldType}-${info.id}`, tr);
 
   if (view) {
     view.focus();
   }
 
-  (window as any).__lastFocus = null;
+  window.__lastFocus = null;
 }
 
-// Define the global pageUtils interface for type safety
-declare global {
-  interface Window {
-    pageUtils: {
-      toggleEdit: typeof toggleEdit;
-      exitEditMode: typeof exitEditMode;
-      exitEditModeAfterSubmit: typeof exitEditModeAfterSubmit;
-      restoreFocus: typeof restoreFocus;
-      cancelOnEscape: typeof cancelOnEscape;
-      formatCurrency: typeof formatCurrency;
-    };
-    __lastFocus: FocusInfo | null;
-  }
-}
+// Type definitions are now in src/types/global.d.ts
 
 // by adding these functions to the window object,
 // we can use them in html (Astro components in this case)
-window.pageUtils = {
-  toggleEdit,
-  exitEditMode,
-  exitEditModeAfterSubmit,
-  restoreFocus,
-  cancelOnEscape,
-  formatCurrency,
-};
-
-document.body.addEventListener("htmx:beforeSwap", (evt: any) => {
-  const status = evt?.detail?.xhr?.status;
-  if (typeof status === "number" && status >= 400) {
-    evt.detail.shouldSwap = false;
-  }
-});
-
-function ensureViewModeForTarget(targetEl: HTMLElement): void {
-  if (!targetEl) return;
-  const targetId = targetEl.id || "";
-  const isPrice = targetId.startsWith("price-cell-");
-  const isQty = targetId.startsWith("qty-cell-");
-  if (!isPrice && !isQty) return;
-
-  const id = targetId.replace("price-cell-", "").replace("qty-cell-", "");
-  const tr = document.getElementById(`row-${id}`);
-  if (!tr) return;
-
-  const cell = isPrice
-    ? (tr.querySelector(`#price-cell-${id}`) as HTMLElement | null)
-    : (tr.querySelector(`#qty-cell-${id}`) as HTMLElement | null);
-  if (!cell) return;
-
-  const viewEl = cell.querySelector(".view") as HTMLElement | null;
-  const editEl = cell.querySelector(".edit") as HTMLElement | null;
-  if (viewEl) viewEl.style.display = "";
-  if (editEl) editEl.style.display = "none";
+// Only assign to window in browser environment
+if (typeof window !== 'undefined') {
+  window.pageUtils = {
+    toggleEdit,
+    exitEditMode,
+    exitEditModeAfterSubmit,
+    restoreFocus,
+    cancelOnEscape,
+    formatCurrency,
+  };
 }
 
-document.body.addEventListener("optimistic:error", (evt: any) => {
-  const targetEl = (evt?.target || null) as HTMLElement | null;
-  if (targetEl) ensureViewModeForTarget(targetEl);
-});
+// Only add event listeners in browser environment
+if (typeof document !== 'undefined') {
+  document.body.addEventListener("htmx:beforeSwap", (evt: any) => {
+    const status = evt?.detail?.xhr?.status;
+    if (typeof status === "number" && status >= 400) {
+      evt.detail.shouldSwap = false;
+    }
+  });
 
-document.body.addEventListener("optimistic:reverted", (evt: any) => {
-  const targetEl = (evt?.target || null) as HTMLElement | null;
-  if (targetEl) ensureViewModeForTarget(targetEl);
-});
+  function ensureViewModeForTarget(targetEl: HTMLElement): void {
+    if (!targetEl) return;
+    const targetId = targetEl.id || "";
+    const isPrice = targetId.startsWith("price-cell-");
+    const isQty = targetId.startsWith("qty-cell-");
+    if (!isPrice && !isQty) return;
+
+    const id = targetId.replace("price-cell-", "").replace("qty-cell-", "");
+    const cellType = isPrice ? "price" : "qty";
+    const cell = getTableCell(id, cellType);
+    if (!cell) return;
+
+    const viewEl = querySelector<HTMLElement>(".view", cell);
+    const editEl = querySelector<HTMLElement>(".edit", cell);
+    toggleElements(viewEl, editEl);
+  }
+
+  document.body.addEventListener("optimistic:error", (evt: any) => {
+    const targetEl = (evt?.target || null) as HTMLElement | null;
+    if (targetEl) ensureViewModeForTarget(targetEl);
+  });
+
+  document.body.addEventListener("optimistic:reverted", (evt: any) => {
+    const targetEl = (evt?.target || null) as HTMLElement | null;
+    if (targetEl) ensureViewModeForTarget(targetEl);
+  });
+}

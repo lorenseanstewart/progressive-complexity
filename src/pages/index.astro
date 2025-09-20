@@ -4,18 +4,17 @@ import SummaryHeader from "../components/SummaryHeader.astro";
 import HomePageTable from "../components/HomePageTable.astro";
 import { parseApiParams, getTableData } from "../lib/api-utils";
 
+// Import Lit components for server-side rendering
+import "../components/web-components/TableHeader.ts";
+
 const params = parseApiParams(Astro.request);
 const { data, total, totals } = getTableData(params);
 ---
 
-<script>
-  import "../components/web-components/TableHeader.ts";
-  import "../lib/page-utils.ts";
-</script>
-
 <Layout>
+
   <div class="space-y-4">
-    <SummaryHeader 
+    <SummaryHeader
       totals={totals}
       page={params.page}
       pageSize={params.pageSize}
@@ -24,7 +23,7 @@ const { data, total, totals } = getTableData(params);
       searchTerm={params.searchTerm}
     />
 
-    <HomePageTable 
+    <HomePageTable
       data={data}
       total={total}
       page={params.page}

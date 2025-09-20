@@ -3,6 +3,8 @@ import { formatCurrency } from "../lib/format";
 import PriceCell from "./PriceCell.astro";
 import QuantityCell from "./QuantityCell.astro";
 import type { Product } from "../types";
+import { buildDeleteUrl } from "../lib/url-utils";
+import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, DEFAULT_SORT_BY, DEFAULT_SORT_ORDER } from "../lib/constants";
 
 export interface Props {
   product: Product;
@@ -15,25 +17,21 @@ export interface Props {
 
 const {
   product,
-  page = 1,
-  pageSize = 10,
-  sort = "id",
-  sortDir = "asc",
+  page = DEFAULT_PAGE,
+  pageSize = DEFAULT_PAGE_SIZE,
+  sort = DEFAULT_SORT_BY,
+  sortDir = DEFAULT_SORT_ORDER,
   searchTerm = "",
 } = Astro.props;
 
-// Helper function to build delete URL with all table state
-const buildDeleteUrl = (productId: number) => {
-  const params = new URLSearchParams();
-  if (page !== 1) params.set("page", page.toString());
-  if (pageSize !== 10) params.set("limit", pageSize.toString());
-  if (sort !== "id") params.set("sortBy", sort);
-  if (sortDir !== "asc") params.set("sortOrder", sortDir);
-  if (searchTerm) params.set("searchTerm", searchTerm);
-
-  const queryString = params.toString();
-  return `/api/products/${productId}${queryString ? "?" + queryString : ""}`;
-};
+// Build delete URL with current table state
+const deleteUrl = buildDeleteUrl(product.id, {
+  page: page !== DEFAULT_PAGE ? page : undefined,
+  limit: pageSize !== DEFAULT_PAGE_SIZE ? pageSize : undefined,
+  sortBy: sort !== DEFAULT_SORT_BY ? sort : undefined,
+  sortOrder: sortDir !== DEFAULT_SORT_ORDER ? sortDir : undefined,
+  searchTerm: searchTerm || undefined,
+});
 
 const subtotal = product.price * product.quantity;
 ---
@@ -44,16 +42,16 @@ const subtotal = product.price * product.quantity;
   data-quantity={product.quantity}
 >
   <td>{product.id}</td>
-  <td>{product.name}</td>
+  <td class="w-[240px]">{product.name}</td>
   <td
-    class="right"
+    class="right w-[160px]"
     hx-ext="optimistic"
     id={`price-cell-${product.id}`}
   >
     <PriceCell product={product} />
   </td>
   <td
-    class="right"
+    class="right w-[160px]"
     hx-ext="optimistic"
     id={`qty-cell-${product.id}`}
   >
@@ -70,7 +68,7 @@ const subtotal = product.price * product.quantity;
   <td class="right">
     <button
       class="btn btn-error btn-sm"
-      hx-delete={buildDeleteUrl(product.id)}
+      hx-delete={deleteUrl}
       hx-target="#table-wrapper"
       hx-swap="outerHTML swap:500ms"
       hx-select="#table-wrapper"

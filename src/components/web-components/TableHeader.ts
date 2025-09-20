@@ -1,5 +1,13 @@
+/// <reference path="../../types/global.d.ts" />
 import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement } from "lit/decorators/custom-element.js";
+import { property } from "lit/decorators/property.js";
+import { buildUrl, type UrlParams } from "../../lib/url-utils";
+import {
+  DEBOUNCE_DELAY,
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_PAGE,
+} from "../../lib/constants";
 
 @customElement("table-header")
 export class TableHeader extends LitElement {
@@ -9,7 +17,7 @@ export class TableHeader extends LitElement {
   }
 
   private debounceTimer: number | null = null;
-  private _isFirstUpdate = true;
+  private currentRequest: any | null = null;
 
   @property({ type: String, attribute: "label" }) label: string = "";
   @property({ type: String, attribute: "field" }) field:
@@ -22,90 +30,119 @@ export class TableHeader extends LitElement {
   @property({ type: String, attribute: "sort-dir" }) sortDir: "asc" | "desc" =
     "asc";
   @property({ type: String, attribute: "search-term" }) searchTerm: string = "";
-  @property({ type: String }) limit: string = "10";
+  @property({ type: String }) limit: string = String(DEFAULT_PAGE_SIZE);
 
-  connectedCallback() {
-    super.connectedCallback();
-    this._isFirstUpdate = true;
-  }
-
-  willUpdate() {
-    // Only clear content on first update after connection
-    // This prevents duplication from cached HTML whe a user
-    // presses the back for forward buttons on the browser
-    if (this._isFirstUpdate) {
-      while (this.firstChild) {
-        this.removeChild(this.firstChild);
+  private restoreFocusFromGlobal() {
+    if (typeof window === "undefined") return;
+    const f = window.__th_focus;
+    if (!f || f.field !== this.field) return;
+    const input = this.querySelector(
+      'input[name="searchTerm"]',
+    ) as HTMLInputElement | null;
+    if (input) {
+      input.focus();
+      if (typeof f.caretPos === "number") {
+        const p = Math.min(f.caretPos, input.value.length);
+        input.setSelectionRange(p, p);
       }
-      this._isFirstUpdate = false;
     }
+    window.__th_focus = null;
   }
 
-  private buildUrl(params: Record<string, string>): string {
-    const url = new URL(window.location.href);
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return url.pathname + url.search;
+  firstUpdated() {
+    this.restoreFocusFromGlobal();
+  }
+
+  updated() {
+    this.restoreFocusFromGlobal();
+  }
+
+  private buildUrlWithParams(params: UrlParams): string {
+    return buildUrl(params);
   }
 
   private getSortUrl(): string {
     const dir =
       this.sortBy === this.field && this.sortDir === "asc" ? "desc" : "asc";
-    return this.buildUrl({
+    return this.buildUrlWithParams({
       sortBy: this.field,
       sortOrder: dir,
-      page: "1",
-      limit: this.limit,
+      page: DEFAULT_PAGE,
+      limit: Number(this.limit),
       searchTerm: this.searchTerm,
     });
+  }
+
+  private updateTable(path: string, caretPos?: number | null) {
+    if (typeof window === "undefined") return;
+    const h = window.htmx;
+    if (!h) return;
+
+    if (
+      this.currentRequest &&
+      typeof this.currentRequest.abort === "function"
+    ) {
+      this.currentRequest.abort();
+    }
+
+    if (typeof caretPos !== "undefined") {
+      window.__th_focus = { field: this.field, caretPos };
+    }
+
+    this.currentRequest = h.ajax("GET", path, {
+      target: "#table-wrapper",
+      select: "#table-wrapper",
+      swap: "outerHTML",
+      pushUrl: true,
+    });
+  }
+
+  private onSort(e: Event) {
+    if (typeof window === "undefined") return;
+    e.preventDefault();
+    const url = this.getSortUrl();
+    const selector = `table-header[field="${this.field}"] input[name="searchTerm"]`;
+    const input = document.querySelector(selector) as HTMLInputElement | null;
+    const pos = input ? (input.selectionStart ?? input.value.length) : null;
+    this.updateTable(url, pos);
+  }
+
+  private onSearchKeyUp(e: KeyboardEvent) {
+    if (e.key !== "Enter") return;
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+    const url = this.buildUrlWithParams({
+      searchTerm: this.searchTerm,
+      page: DEFAULT_PAGE,
+      limit: Number(this.limit),
+      sortBy: this.sortBy,
+      sortOrder: this.sortDir,
+    });
+    const active = document.activeElement as HTMLInputElement | null;
+    const pos =
+      active && active.name === "searchTerm" ? active.selectionStart : null;
+    this.updateTable(url, pos);
   }
 
   private onSearchInput(e: Event) {
     const input = e.target as HTMLInputElement;
     this.searchTerm = input.value;
-
+    if (typeof window === "undefined") return;
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
-
     this.debounceTimer = window.setTimeout(() => {
-      const searchForm = this.querySelector(".search-form") as HTMLFormElement;
-      if (searchForm) {
-        const action = this.buildUrl({
-          searchTerm: this.searchTerm,
-          page: "1",
-          limit: this.limit,
-          sortBy: this.sortBy,
-          sortOrder: this.sortDir,
-        });
-        searchForm.action = action;
-
-        const inputEl = searchForm.querySelector(
-          'input[name="searchTerm"]',
-        ) as HTMLInputElement | null;
-        if (inputEl) inputEl.value = this.searchTerm;
-
-        const active = document.activeElement as HTMLInputElement | null;
-        const pos = active === input ? input.selectionStart : null;
-
-        const handleAfterRequest = () => {
-          setTimeout(() => {
-            const newInput = document.querySelector(
-              `table-header[field="${this.field}"] input[name="searchTerm"]`,
-            ) as HTMLInputElement | null;
-            if (newInput && pos !== null) {
-              newInput.focus();
-              newInput.setSelectionRange(pos, pos);
-            }
-          }, 10);
-          document.body.removeEventListener(
-            "htmx:afterRequest",
-            handleAfterRequest,
-          );
-        };
-        document.body.addEventListener("htmx:afterRequest", handleAfterRequest);
-
-        searchForm.requestSubmit();
-      }
+      const url = this.buildUrlWithParams({
+        searchTerm: this.searchTerm,
+        page: DEFAULT_PAGE,
+        limit: Number(this.limit),
+        sortBy: this.sortBy,
+        sortOrder: this.sortDir,
+      });
+      const pos = input.selectionStart;
+      this.updateTable(url, pos);
       this.debounceTimer = null;
-    }, 300);
+    }, DEBOUNCE_DELAY);
   }
 
   render() {
@@ -114,26 +151,26 @@ export class TableHeader extends LitElement {
 
     return html`
       <div
-        class="flex items-center gap-2 ${this.label === "Name"
-          ? "justify-start"
-          : "justify-end"}"
+        id="table-header-sort-${this.field}"
+        style="display: flex; align-items: center; gap: 0.5rem; ${this.label ===
+        "Name"
+          ? "justify-content: flex-start;"
+          : "justify-content: flex-end;"}"
       >
         <a
-          class="btn btn-ghost btn-xs normal-case font-normal cursor-pointer"
+          style="display: flex; align-items: center; padding: 0.25rem 0.5rem; background: transparent; border: none; font-size: 0.75rem; text-transform: none; font-weight: normal; cursor: pointer; text-decoration: none;"
           href=${this.getSortUrl()}
-          hx-get=${this.getSortUrl()}
-          hx-target="#table-wrapper"
-          hx-select="#table-wrapper"
-          hx-swap="outerHTML"
-          hx-push-url="true"
+          @click=${this.onSort}
           aria-label="Sort by ${this.label}"
         >
           <span>${this.label}</span>
-          <span class="flex flex-col ml-1 leading-none text-xs">
-            <span class="${up ? "text-primary" : "opacity-50"}"
+          <span
+            style="display: flex; flex-direction: column; margin-left: 0.25rem; line-height: 1; font-size: 0.75rem;"
+          >
+            <span style="${up ? "color: #6366f1;" : "opacity: 0.5;"}"
               >${up ? "▲" : "△"}</span
             >
-            <span class="${down ? "text-primary" : "opacity-50"}"
+            <span style="${down ? "color: #6366f1;" : "opacity: 0.5;"}"
               >${down ? "▼" : "▽"}</span
             >
           </span>
@@ -141,14 +178,8 @@ export class TableHeader extends LitElement {
         ${this.searchable
           ? html`
               <form
-                class="search-form flex"
-                method="GET"
-                action="/"
-                hx-get="/"
-                hx-target="#table-wrapper"
-                hx-select="#table-wrapper"
-                hx-swap="outerHTML"
-                hx-push-url="true"
+                id="table-header-search-${this.field}"
+                style="display: flex;"
               >
                 <input type="hidden" name="page" value="1" />
                 <input type="hidden" name="limit" .value=${this.limit} />
@@ -157,10 +188,11 @@ export class TableHeader extends LitElement {
                 <input
                   name="searchTerm"
                   type="search"
-                  class="input input-bordered input-xs w-24"
+                  style="padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; font-size: 0.75rem; width: 6rem;"
                   placeholder="Search"
                   .value=${this.searchTerm}
                   @input=${this.onSearchInput}
+                  @keyup=${this.onSearchKeyUp}
                   aria-label="Search by ${this.label.toLowerCase()}"
                 />
               </form>

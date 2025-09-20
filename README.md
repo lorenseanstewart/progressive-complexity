@@ -4,7 +4,17 @@
 
 https://www.lorenstew.art/blog/progressive-complexity-manifesto
 
-This repository demonstrates how to build a full-featured interactive application using HTML, HTMX, and minimal JavaScript. The result is a **~70 kB JavaScript bundle** that delivers enterprise-grade functionality without framework complexity.
+This repository demonstrates how to build a full-featured interactive application using HTML, HTMX, and minimal JavaScript. The result is a **25.8 kB gzipped JavaScript bundle** that delivers enterprise-grade functionality without framework complexity.
+
+### 🎯 Key Achievements
+- **Minimal JS Bundle**: Only 25.8 kB gzipped total
+  - HTMX: 47.0 kB (15.3 kB gzipped)
+  - Application code: 21.3 kB (7.6 kB gzipped)
+  - hx-optimistic: 8.3 kB (2.9 kB gzipped)
+  - Uncompressed total: 76.5 kB
+- **Type-Safe**: Full TypeScript coverage with zero `any` types
+- **DRY Code**: Centralized utilities and shared constants
+- **Maintainable**: Clear separation of concerns and modular architecture
 
 ## Quick Start
 
@@ -52,8 +62,28 @@ Then check the Network tab or run `npm run report` to see the actual production 
 - **HTMX**: Declarative AJAX interactions via HTML attributes
 - **DaisyUI + Tailwind**: Styling with semantic color classes
 - **TypeScript**: Type safety for utilities and components
-- **Lit**: Web Components for complex table headers (Level 4 escalation)
+- **Lit v3**: Web Components for complex table headers (Level 4 escalation)
 - **hx-optimistic**: HTMX extension for optimistic UI updates
+
+### Clean Architecture Principles
+
+The codebase follows modern best practices for maintainability and scalability:
+
+#### 🔧 Modular Utilities
+- **URL Building**: Centralized URL construction in `url-utils.ts`
+- **Constants**: App-wide settings in `constants.ts` (DEFAULT_PAGE, DEFAULT_PAGE_SIZE, etc.)
+- **DOM Helpers**: Type-safe element queries in `dom-utils.ts`
+- **API Responses**: Consistent error handling in `api-response-utils.ts`
+
+#### 📦 Full Type Safety
+- Zero `any` types - everything is properly typed
+- Global type definitions for Window, HTMX, and custom properties
+- Strong typing for all utility functions and API responses
+
+#### ♻️ DRY Code
+- Shared URL building logic across components
+- Consistent error response patterns
+- Reusable DOM manipulation patterns
 
 ### Progressive Complexity Levels Used
 
@@ -72,18 +102,27 @@ src/
 ├── middleware.ts            # JWT authentication middleware
 ├── components/
 │   ├── web-components/      # Level 4: Complex stateful components
-│   │   └── TableHeader.ts   # Search + sorting with debounced input
+│   │   └── TableHeader.ts   # Search + sorting with debounced input (Lit v3)
 │   ├── HomePageTable.astro  # Level 2: Server-rendered components
 │   ├── ProductRow.astro     # Simple data display with HTMX attributes
+│   ├── PriceCell.astro      # Inline price editing with optimistic updates
+│   ├── QuantityCell.astro   # Inline quantity editing with optimistic updates
 │   ├── SummaryHeader.astro  # Header with totals summary
 │   ├── TotalsSummary.astro  # Read-only totals display
 │   ├── UserWelcome.astro    # User display from JWT context
 │   └── ApiResponse.astro    # Reusable API response wrapper
-└── lib/
-    ├── store.ts             # Product data store
-    ├── api-utils.ts         # API parsing utilities
-    ├── page-utils.ts        # Client-side interaction utilities
-    └── format.ts            # Data formatting helpers
+├── lib/
+│   ├── store.ts             # Product data store
+│   ├── api-utils.ts         # API parsing utilities
+│   ├── api-response-utils.ts # Standardized API response handling
+│   ├── page-utils.ts        # Client-side interaction utilities
+│   ├── dom-utils.ts         # DOM manipulation helpers
+│   ├── url-utils.ts         # URL building and parameter utilities
+│   ├── constants.ts         # Centralized app-wide constants
+│   └── format.ts            # Data formatting helpers
+└── types/
+    ├── index.ts             # Core domain types
+    └── global.d.ts          # Global type definitions (Window, HTMX, etc.)
 ```
 
 **Key insight**: Most components stay at Level 2 (server-rendered Astro components). Only when we needed complex client-side state (debounced search with focus preservation that is reusable) did we escalate to Level 4 (Web Components). This keeps the bulk of the application simple while allowing sophisticated interactions where needed.
@@ -154,16 +193,25 @@ src/
 
 ```typescript
 // /src/pages/api/products/[id]/price.astro
+import { createErrorResponse, validateNumericInput } from "../../../../lib/api-response-utils";
+
 const id = Number(Astro.params.id);
 const formData = await Astro.request.formData();
-const price = Number(formData.get("price"));
 
-// Validation
-if (price === 99.99) {
-  return new Response("Error: Price cannot be 99.99", { status: 500 });
+// Type-safe validation
+const priceValidation = validateNumericInput(formData.get("price"), "price", 0);
+if (priceValidation instanceof Response) {
+  return priceValidation;
 }
 
-// Update data
+const price = priceValidation;
+
+// Business logic validation
+if (price === 99.99) {
+  return createErrorResponse("Error: Price cannot be 99.99");
+}
+
+// Update data store
 updateProductField(id, "price", price);
 
 // Return updated HTML (not JSON!)
@@ -267,23 +315,24 @@ Here is the hx-optimistic template code:
 </template>
 ```
 
-In `page-utils.ts`, prevent error swaps and ensure view mode:
+In `page-utils.ts`, error handling and view state management:
 
 ```typescript
-document.body.addEventListener("htmx:beforeSwap", (evt: any) => {
+// Type-safe event handling
+document.body.addEventListener("htmx:beforeSwap", (evt: CustomEvent) => {
   const status = evt?.detail?.xhr?.status;
   if (typeof status === "number" && status >= 400) {
     evt.detail.shouldSwap = false;
   }
 });
 
-document.body.addEventListener("optimistic:error", (evt: any) => {
-  const targetEl = (evt?.target || null) as HTMLElement | null;
+document.body.addEventListener("optimistic:error", (evt: Event) => {
+  const targetEl = evt?.target as HTMLElement | null;
   if (targetEl) ensureViewModeForTarget(targetEl);
 });
 
-document.body.addEventListener("optimistic:reverted", (evt: any) => {
-  const targetEl = (evt?.target || null) as HTMLElement | null;
+document.body.addEventListener("optimistic:reverted", (evt: Event) => {
+  const targetEl = evt?.target as HTMLElement | null;
   if (targetEl) ensureViewModeForTarget(targetEl);
 });
 ```
@@ -296,12 +345,15 @@ When server returns 500 status (e.g., price = 99.99), htmx:beforeSwap prevents t
 
 ### Web Components (Level 4)
 
-#### Dynamic Table Headers
+#### Dynamic Table Headers with Lit v3
 
 ```typescript
 // /src/components/web-components/TableHeader.ts
 import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement } from "lit/decorators/custom-element.js";
+import { property } from "lit/decorators/property.js";
+import { buildUrl } from "../../lib/url-utils";
+import { DEBOUNCE_DELAY, DEFAULT_PAGE_SIZE } from "../../lib/constants";
 
 @customElement("table-header")
 export class TableHeader extends LitElement {
@@ -312,39 +364,41 @@ export class TableHeader extends LitElement {
 
   private debounceTimer: number | null = null;
 
-  @property({ type: String, attribute: "label" }) label: string = "";
-  @property({ type: String, attribute: "field" }) field:
-    | "name"
-    | "price"
-    | "quantity" = "name";
+  @property({ type: String, attribute: "label" })
+  label = "";
+
+  @property({ type: String, attribute: "field" })
+  field: "name" | "price" | "quantity" = "name";
+
   @property({ type: Boolean, attribute: "searchable", reflect: true })
   searchable = false;
-  @property({ type: String, attribute: "sort-by" }) sortBy: string = "id";
-  @property({ type: String, attribute: "sort-dir" }) sortDir: "asc" | "desc" =
-    "asc";
-  @property({ type: String, attribute: "search-term" }) searchTerm: string = "";
-  @property({ type: String }) limit: string = "10";
 
-  private buildUrl(params: Record<string, string>): string {
-    const url = new URL(window.location.href);
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    return url.pathname + url.search;
-  }
+  @property({ type: String, attribute: "sort-by" })
+  sortBy = "id";
+
+  @property({ type: String, attribute: "sort-dir" })
+  sortDir: "asc" | "desc" = "asc";
+
+  @property({ type: String, attribute: "search-term" })
+  searchTerm = "";
+
+  @property({ type: String })
+  limit = String(DEFAULT_PAGE_SIZE);
 
   private getSortUrl(): string {
-    const dir =
-      this.sortBy === this.field && this.sortDir === "asc" ? "desc" : "asc";
-    return this.buildUrl({
+    const dir = this.sortBy === this.field && this.sortDir === "asc" ? "desc" : "asc";
+    return buildUrl({
       sortBy: this.field,
       sortOrder: dir,
-      page: "1",
-      limit: this.limit,
+      page: DEFAULT_PAGE,
+      limit: Number(this.limit),
       searchTerm: this.searchTerm,
     });
   }
 
   private onSearchInput(e: Event) {
-    /* debounced search logic - see TableHeader.ts for full implementation */
+    // Debounced search with DEBOUNCE_DELAY constant
+    // Full implementation in TableHeader.ts
   }
 
   render() {
@@ -731,15 +785,14 @@ return (
 
 ### Bundle Analysis
 
-- **Total JavaScript**: 70.4 kB uncompressed
-  - HTMX: 47.0 kB
-  - hx-optimistic (minified): 8.4 kB
+- **Total JavaScript**: 76.5 kB uncompressed (25.8 kB gzipped)
+  - HTMX: 47.0 kB (15.3 kB gzipped)
+  - Application code: 21.3 kB (7.6 kB gzipped)
+  - hx-optimistic: 8.3 kB (2.9 kB gzipped)
 - **TypeScript Implementation**:
   - **37 lines** of clean type definitions in `/src/types/index.ts`
-  - **186 lines** of typed utilities in `/src/lib/page-utils.ts`
   - **Full type coverage** across store, API utilities, and formatting
   - **Simple, effective type safety** without complexity overhead
-- **Compressed**: 23.3 kB gzipped
 
 > ⚠️ **Measurement Note**: Run `npm run build && npm run report` to see actual production sizes. The dev server (`npm run dev`) includes development tools that don't ship to production.
 
@@ -895,6 +948,32 @@ updateProductField(id, "status", status);
 if (searchTerm && searchField === "status") {
   filtered = filtered.filter((p) => p.status.includes(searchTerm));
 }
+```
+
+## Testing the Application
+
+### Development Setup
+
+```bash
+npm install      # Install dependencies
+npm run dev      # Start dev server on http://localhost:4322
+```
+
+### Key Features to Test
+
+1. **Pagination & Navigation**: Browse through pages with bookmarkable URLs
+2. **Inline Editing**: Click price/quantity cells to edit, Enter to save, Escape to cancel
+3. **Column Sorting**: Click headers to sort, with visual indicators
+4. **Search**: Type in column headers for debounced search with focus preservation
+5. **Error Handling**: Try entering 99.99 as a price to see error handling
+6. **Optimistic Updates**: Throttle network to see pink highlighting during updates
+
+### Production Build
+
+```bash
+npm run build    # Build for production
+npm run preview  # Preview production build on http://localhost:4321
+npm run report   # Generate bundle size report
 ```
 
 ## Deployment

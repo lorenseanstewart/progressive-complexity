@@ -2,23 +2,32 @@
 import { updateProductField, getProductById } from "../../../../lib/store";
 import { formatCurrency } from "../../../../lib/format";
 import { parseApiParams, getTableData } from "../../../../lib/api-utils";
+import { createNotFoundResponse, validateNumericInput, handleApiError } from "../../../../lib/api-response-utils";
 import QuantityCell from "../../../../components/QuantityCell.astro";
 import TotalsSummary from "../../../../components/TotalsSummary.astro";
 
 const id = Number(Astro.params.id);
 const formData = await Astro.request.formData();
-const qty = Number(formData.get("quantity"));
+
+const qtyInput = formData.get("quantity");
+const qtyValidation = validateNumericInput(qtyInput, "quantity", 0);
+
+if (qtyValidation instanceof Response) {
+  return qtyValidation;
+}
+
+const qty = qtyValidation;
 
 try {
   updateProductField(id, "quantity", qty);
 } catch (e) {
-  return new Response("Error updating product", { status: 500 });
+  return handleApiError(e, "Error updating product");
 }
 
 // Get updated product and calculate new subtotal
 const product = getProductById(id);
 if (!product) {
-  return new Response("Product not found", { status: 404 });
+  return createNotFoundResponse("Product");
 }
 
 const subtotal = product.price * product.quantity;

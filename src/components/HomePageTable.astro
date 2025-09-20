@@ -23,6 +23,10 @@ const prevHref = `/?page=${prevPage}&limit=${pageSize}&sortBy=${sort}&sortOrder=
 const nextHref = `/?page=${nextPage}&limit=${pageSize}&sortBy=${sort}&sortOrder=${sortDir}&searchTerm=${encodeURIComponent(searchTerm)}`;
 ---
 
+<script>
+  import "../components/web-components/TableHeader.ts";
+</script>
+
 <div
   class="card bg-base-100 shadow-lg"
   id="table-wrapper"

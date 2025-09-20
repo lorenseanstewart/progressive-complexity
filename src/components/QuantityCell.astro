@@ -10,7 +10,7 @@ const { product, isEdit = false } = Astro.props;
 ---
 
 <span
-  class="view"
+  class="view inline-block"
   id={`view-qty-${product.id}`}
   tabindex="0"
   aria-live="polite"
@@ -25,6 +25,7 @@ const { product, isEdit = false } = Astro.props;
     name="quantity"
     type="number"
     step="1"
+    class="w-[100px]"
     value={product.quantity}
     hx-ext="optimistic"
     hx-patch={`/api/products/${product.id}/quantity`}
