@@ -38,27 +38,8 @@ const { product, isEdit = false } = Astro.props;
     onkeyup="if(event.key==='Enter') window.pageUtils.exitEditModeAfterSubmit(this)"
     onblur="window.pageUtils.exitEditModeAfterSubmit(this)"
     data-optimistic={JSON.stringify({
-      template: `#tpl-qty-${product.id}`,
-      errorTemplate: `#tpl-qty-${product.id}-error`,
+      template: `#hxopt-tpl-qty`,
+      errorTemplate: `#hxopt-tpl-qty-error`,
     })}
   />
 </span>
-<template id={`tpl-qty-${product.id}`}>
-  <span
-    class="view optimistic-update"
-    id={`view-qty-${product.id}`}
-    tabindex="0"
-    aria-live="polite"
-    aria-atomic="true"
-    hx-on:click={`window.pageUtils.toggleEdit(${product.id}, true, 'quantity')`}
-    onkeydown={`if(event.key==='Enter'||event.key===' '){window.pageUtils.toggleEdit(${product.id}, true, 'quantity');event.preventDefault();}`}
-    >${"${this.value}"}</span
-  >
-</template>
-<template id={`tpl-qty-${product.id}-error`}>
-  <span
-    class="view text-error"
-    id={`view-qty-${product.id}`}
-    >Error</span
-  >
-</template>

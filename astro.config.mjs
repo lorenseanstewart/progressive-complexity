@@ -7,7 +7,7 @@ export default defineConfig({
   output: "server",
   adapter: node({ mode: "standalone" }),
   integrations: [tailwind()],
-  
+
   vite: {
     optimizeDeps: {
       include: ["lit", "lit-element", "lit-html"],
@@ -18,17 +18,16 @@ export default defineConfig({
     },
     resolve: {
       alias: {
-        'lit-element/lit-element.js': 'lit-element',
-        'lit-html/is-server.js': 'lit-html/is-server',
+        "lit-element/lit-element.js": "lit-element",
       },
     },
     build: {
       // CSS optimization
       cssCodeSplit: true,
       cssMinify: true,
-      
+
       // JavaScript optimization
-      minify: 'terser',
+      minify: "terser",
       terserOptions: {
         compress: {
           drop_console: true, // Remove console logs in production
@@ -36,15 +35,15 @@ export default defineConfig({
         },
         mangle: true,
       },
-      
+
       // Chunk size optimization
       chunkSizeWarningLimit: 500,
       rollupOptions: {
         output: {
           manualChunks: {
             // Split vendor chunks for better caching
-            'vendor-lit': ['lit'],
-            'vendor-htmx': ['htmx.org'],
+            "vendor-lit": ["lit"],
+            "vendor-htmx": ["htmx.org"],
           },
         },
       },
@@ -53,8 +52,8 @@ export default defineConfig({
 
   build: {
     // Inline small stylesheets for better performance
-    inlineStylesheets: 'auto',
-    
+    inlineStylesheets: "auto",
+
     // Compress HTML
     compress: true,
   },
