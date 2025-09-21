@@ -7,6 +7,7 @@ https://www.lorenstew.art/blog/progressive-complexity-manifesto
 This repository demonstrates how to build a full-featured interactive application using HTML, HTMX, and minimal JavaScript. The result is a **25.8 kB gzipped JavaScript bundle** that delivers enterprise-grade functionality without framework complexity.
 
 ### 🎯 Key Achievements
+
 - **Minimal JS Bundle**: Only 25.8 kB gzipped total
   - HTMX: 47.0 kB (15.3 kB gzipped)
   - Application code: 21.3 kB (7.6 kB gzipped)
@@ -70,20 +71,17 @@ Then check the Network tab or run `npm run report` to see the actual production 
 The codebase follows modern best practices for maintainability and scalability:
 
 #### 🔧 Modular Utilities
+
 - **URL Building**: Centralized URL construction in `url-utils.ts`
 - **Constants**: App-wide settings in `constants.ts` (DEFAULT_PAGE, DEFAULT_PAGE_SIZE, etc.)
 - **DOM Helpers**: Type-safe element queries in `dom-utils.ts`
 - **API Responses**: Consistent error handling in `api-response-utils.ts`
 
 #### 📦 Full Type Safety
+
 - Zero `any` types - everything is properly typed
 - Global type definitions for Window, HTMX, and custom properties
 - Strong typing for all utility functions and API responses
-
-#### ♻️ DRY Code
-- Shared URL building logic across components
-- Consistent error response patterns
-- Reusable DOM manipulation patterns
 
 ### Progressive Complexity Levels Used
 
@@ -386,7 +384,8 @@ export class TableHeader extends LitElement {
   limit = String(DEFAULT_PAGE_SIZE);
 
   private getSortUrl(): string {
-    const dir = this.sortBy === this.field && this.sortDir === "asc" ? "desc" : "asc";
+    const dir =
+      this.sortBy === this.field && this.sortDir === "asc" ? "desc" : "asc";
     return buildUrl({
       sortBy: this.field,
       sortOrder: dir,
@@ -712,103 +711,6 @@ declare global {
 
 - Fields show a brief optimistic visual change. On server error (e.g., price 99.99), the field displays a red “Error” and then reverts to the last server value. Server remains the source of truth for totals.
 
-## Why Progressive Complexity Works
-
-### **The Framework Problem**
-
-Traditional framework approaches require:
-
-- **Hydration overhead**: Client must reconstruct server state
-- **Bundle size explosion**: Framework + app code + dependencies
-- **Complexity cascade**: Simple features require complex abstractions
-- **Development overhead**: Build tools, hot reload, state management
-
-### **The Progressive Complexity Solution**
-
-Our approach eliminates these problems:
-
-- **No hydration**: HTML is already interactive via HTMX
-- **Minimal JavaScript**: Only what's needed for polish and enhancement
-- **Direct DOM manipulation**: When needed, target exactly what should change
-- **Server authority**: Single source of truth, no synchronization bugs
-
-### **Concrete Comparison: Adding a Search Feature**
-
-**Framework Approach (React):**
-
-```jsx
-const [searchTerm, setSearchTerm] = useState('');
-const [results, setResults] = useState([]);
-const [loading, setLoading] = useState(false);
-
-const debouncedSearch = useMemo(
-  () => debounce(async (term) => {
-    setLoading(true);
-    const response = await fetch(`/api/search?q=${term}`);
-    const data = await response.json();
-    setResults(data.results);
-    setLoading(false);
-  }, 300),
-  []
-);
-
-useEffect(() => {
-  if (searchTerm) debouncedSearch(searchTerm);
-}, [searchTerm, debouncedSearch]);
-
-return (
-  <input
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value)}
-    placeholder="Search..."
-  />
-  {loading && <Spinner />}
-  {results.map(result => <ResultItem key={result.id} {...result} />)}
-);
-```
-
-**Progressive Complexity Approach:**
-
-```html
-<input
-  hx-get="/api/search"
-  hx-trigger="keyup changed delay:300ms"
-  hx-target="#results"
-  placeholder="Search..."
-/>
-<div id="results"></div>
-```
-
-**Result**: 3 lines vs 25+ lines. Server handles debouncing, state, and rendering.
-
-## Performance Characteristics
-
-### Bundle Analysis
-
-- **Total JavaScript**: 76.5 kB uncompressed (25.8 kB gzipped)
-  - HTMX: 47.0 kB (15.3 kB gzipped)
-  - Application code: 21.3 kB (7.6 kB gzipped)
-  - hx-optimistic: 8.3 kB (2.9 kB gzipped)
-- **TypeScript Implementation**:
-  - **37 lines** of clean type definitions in `/src/types/index.ts`
-  - **Full type coverage** across store, API utilities, and formatting
-  - **Simple, effective type safety** without complexity overhead
-
-> ⚠️ **Measurement Note**: Run `npm run build && npm run report` to see actual production sizes. The dev server (`npm run dev`) includes development tools that don't ship to production.
-
-### Runtime Performance
-
-- **First Contentful Paint**: Immediate (server-rendered HTML)
-- **Time to Interactive**: ~50ms (HTMX initialization)
-- **Interaction Latency**: 0ms (optimistic updates)
-- **Memory Usage**: Minimal (no virtual DOM, no large state trees)
-
-### Network Efficiency
-
-- **HTML responses** are smaller than JSON + client templates
-- **Partial updates** via HTMX (only table content changes)
-- **Progressive enhancement** (graceful degradation)
-
 ## Production Scalability
 
 ### **When This Approach Scales**
@@ -847,156 +749,6 @@ const products = await db.products
 - Frontend specialists focus on Level 4/5 components when needed
 - No frontend/backend coordination for simple features
 
-## Migration Strategies
-
-### **From React to Progressive Complexity**
-
-**Step 1: Identify Page Types**
-
-- **Static-heavy pages**: Start here (product pages, articles)
-- **Form-heavy pages**: Perfect for HTMX
-- **Complex interactive**: Keep React initially, migrate last
-
-**Step 2: Replace Simple Interactions**
-
-```jsx
-// Before: React form submission
-const handleSubmit = async (formData) => {
-  setLoading(true);
-  const response = await fetch('/api/contact', {
-    method: 'POST',
-    body: JSON.stringify(formData)
-  });
-  if (response.ok) {
-    setMessage('Success!');
-  }
-  setLoading(false);
-};
-
-// After: HTMX form
-<form hx-post="/api/contact" hx-target="#message">
-  <!-- form fields -->
-  <button type="submit">Submit</button>
-</form>
-<div id="message"></div>
-```
-
-**Step 3: Extract Reusable Components**
-Move shared logic to server-side templates or Web Components
-
-**Step 4: Optimize Bundle**
-Remove unused React code, measure improvements
-
-### **From jQuery to Progressive Complexity**
-
-**Perfect Migration Path:**
-
-- Keep existing server-rendered pages
-- Replace jQuery AJAX with HTMX attributes
-- Move complex interactions to Lit Web Components
-- No full rewrite required
-
-## Common Patterns
-
-### Adding New Editable Fields
-
-1. **Add to ProductRow.astro**:
-
-```html
-<td>
-  <span class="view" id="view-status-{product.id}"> {product.status} </span>
-  <span class="edit" style="display:none;">
-    <select
-      hx-patch="/api/products/{product.id}/status"
-      hx-target="#table-wrapper"
-    >
-      <option value="active">Active</option>
-      <option value="inactive">Inactive</option>
-    </select>
-  </span>
-</td>
-```
-
-2. **Create API endpoint** (`/api/products/[id]/status.astro`):
-
-```typescript
-const status = formData.get("status");
-updateProductField(id, "status", status);
-// Return full table HTML
-```
-
-3. **Add to page-utils.ts** (if special handling needed):
-
-```typescript
-// Extend handleOptimisticUpdate for new field types
-```
-
-### Adding New Table Features
-
-1. **Add table header**:
-
-```html
-<th>
-  <table-header label="Status" field="status" searchable></table-header>
-</th>
-```
-
-2. **Update server filtering**:
-
-```typescript
-// Add to getProducts function
-if (searchTerm && searchField === "status") {
-  filtered = filtered.filter((p) => p.status.includes(searchTerm));
-}
-```
-
-## Testing the Application
-
-### Development Setup
-
-```bash
-npm install      # Install dependencies
-npm run dev      # Start dev server on http://localhost:4322
-```
-
-### Key Features to Test
-
-1. **Pagination & Navigation**: Browse through pages with bookmarkable URLs
-2. **Inline Editing**: Click price/quantity cells to edit, Enter to save, Escape to cancel
-3. **Column Sorting**: Click headers to sort, with visual indicators
-4. **Search**: Type in column headers for debounced search with focus preservation
-5. **Error Handling**: Try entering 99.99 as a price to see error handling
-6. **Optimistic Updates**: Throttle network to see pink highlighting during updates
-
-### Production Build
-
-```bash
-npm run build    # Build for production
-npm run preview  # Preview production build on http://localhost:4321
-npm run report   # Generate bundle size report
-```
-
-## Deployment
-
-### Build Process
-
-```bash
-npm run build    # Generates static files + server routes
-npm start        # Preview production build
-```
-
-### Static + Server Routes
-
-- **Static pages**: Pre-rendered at build time
-- **API routes**: Server-side functions for data operations
-- **Assets**: Optimized CSS/JS bundles
-
-### Hosting Options
-
-- **Vercel/Netlify**: Zero-config deployment
-- **Docker**: Standard Node.js container
-- **Traditional hosting**: Any server that runs Node.js
-
 ## Further Reading
 
 - **[Progressive Complexity Manifesto](progressive-complexity-manifesto.md)**: The philosophy behind this approach
@@ -1013,6 +765,6 @@ Found a bug? Want to improve the implementation?
 3. Make your changes
 4. Submit a pull request
 
-This demo proves that **most web applications don't need framework complexity**. Server-rendered HTML + HTMX + minimal JavaScript delivers better performance, simpler maintenance, and happier developers.
+This demo proves that **many web applications don't need framework complexity**. Server-rendered HTML + HTMX + minimal JavaScript delivers better performance, simpler maintenance, and happier developers.
 
 Start simple. Escalate with purpose. The web awaits its renaissance.
