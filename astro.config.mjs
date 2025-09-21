@@ -10,10 +10,17 @@ export default defineConfig({
   
   vite: {
     optimizeDeps: {
-      include: ["lit"],
+      include: ["lit", "lit-element", "lit-html"],
+      exclude: [],
     },
     ssr: {
-      noExternal: ["lit"],
+      noExternal: ["lit", "lit-element", "lit-html"],
+    },
+    resolve: {
+      alias: {
+        'lit-element/lit-element.js': 'lit-element',
+        'lit-html/is-server.js': 'lit-html/is-server',
+      },
     },
     build: {
       // CSS optimization

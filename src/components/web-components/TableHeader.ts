@@ -3,6 +3,7 @@ import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators/custom-element.js";
 import { property } from "lit/decorators/property.js";
 import { buildUrl, type UrlParams } from "../../lib/url-utils";
+import type { HtmxRequest } from "../../types/global";
 import {
   DEBOUNCE_DELAY,
   DEFAULT_PAGE_SIZE,
@@ -17,7 +18,7 @@ export class TableHeader extends LitElement {
   }
 
   private debounceTimer: number | null = null;
-  private currentRequest: any | null = null;
+  private currentRequest: HtmxRequest | null = null;
 
   @property({ type: String, attribute: "label" }) label: string = "";
   @property({ type: String, attribute: "field" }) field:

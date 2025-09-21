@@ -1,4 +1,5 @@
 /// <reference path="../types/global.d.ts" />
+import type { HtmxBeforeSwapEvent, OptimisticEvent } from "../types/global";
 import { formatCurrency } from "./format";
 import {
   getElementById,
@@ -138,10 +139,10 @@ if (typeof window !== 'undefined') {
 
 // Only add event listeners in browser environment
 if (typeof document !== 'undefined') {
-  document.body.addEventListener("htmx:beforeSwap", (evt: any) => {
-    const status = evt?.detail?.xhr?.status;
+  document.body.addEventListener("htmx:beforeSwap", (evt: Event) => {
+    const status = (evt as HtmxBeforeSwapEvent)?.detail?.xhr?.status;
     if (typeof status === "number" && status >= 400) {
-      evt.detail.shouldSwap = false;
+      (evt as HtmxBeforeSwapEvent).detail.shouldSwap = false;
     }
   });
 
@@ -162,13 +163,13 @@ if (typeof document !== 'undefined') {
     toggleElements(viewEl, editEl);
   }
 
-  document.body.addEventListener("optimistic:error", (evt: any) => {
-    const targetEl = (evt?.target || null) as HTMLElement | null;
+  document.body.addEventListener("optimistic:error", (evt: Event) => {
+    const targetEl = (evt as OptimisticEvent)?.target || null;
     if (targetEl) ensureViewModeForTarget(targetEl);
   });
 
-  document.body.addEventListener("optimistic:reverted", (evt: any) => {
-    const targetEl = (evt?.target || null) as HTMLElement | null;
+  document.body.addEventListener("optimistic:reverted", (evt: Event) => {
+    const targetEl = (evt as OptimisticEvent)?.target || null;
     if (targetEl) ensureViewModeForTarget(targetEl);
   });
 }

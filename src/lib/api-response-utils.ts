@@ -14,7 +14,7 @@ export function createNotFoundResponse(resource: string = 'Resource'): Response 
 
 export function createValidationErrorResponse(
   field: string,
-  value: any,
+  value: string | number | FormDataEntryValue | null,
   reason: string
 ): Response {
   return createErrorResponse(
@@ -52,7 +52,7 @@ export function handleApiError(
 }
 
 export function validateNumericInput(
-  value: any,
+  value: string | number | FormDataEntryValue | null,
   fieldName: string,
   min?: number,
   max?: number
