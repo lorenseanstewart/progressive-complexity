@@ -692,7 +692,6 @@ declare global {
 - **Universal access**: `Astro.locals.jwt` available in all routes and components
 - **Performance**: Single JWT parse per request, cached in context
 - **Security**: JWT validation happens before any route logic
-- **Simplicity**: All user data comes from JWT - no additional database calls
 - **Progressive Enhancement**: Works with or without JavaScript enabled
 
 ### Accessibility
