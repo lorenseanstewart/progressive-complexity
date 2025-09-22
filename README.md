@@ -13,8 +13,9 @@ This repository demonstrates how to build a full-featured interactive applicatio
   - Application code: 21.3 kB (7.6 kB gzipped)
   - hx-optimistic: 8.3 kB (2.9 kB gzipped)
   - Uncompressed total: 76.5 kB
-- **Type-Safe**: Full TypeScript coverage with zero `any` types
-- **DRY Code**: Centralized utilities and shared constants
+- **Type-Safe**: Full TypeScript coverage with runtime validation
+- **Zero TypeScript Errors**: Strict mode with comprehensive type checking
+- **DRY Code**: Centralized configuration and shared utilities
 - **Maintainable**: Clear separation of concerns and modular architecture
 
 ## Quick Start
@@ -72,9 +73,10 @@ The codebase follows modern best practices for maintainability and scalability:
 
 #### 🔧 Modular Utilities
 
+- **Configuration**: Centralized settings in `config.ts` with validation rules
+- **Type Guards**: Runtime type validation in `type-guards.ts`
 - **URL Building**: Centralized URL construction in `url-utils.ts`
-- **Constants**: App-wide settings in `constants.ts` (DEFAULT_PAGE, DEFAULT_PAGE_SIZE, etc.)
-- **DOM Helpers**: Type-safe element queries in `dom-utils.ts`
+- **DOM Helpers**: Type-safe element queries with runtime checks in `dom-utils.ts`
 - **API Responses**: Consistent error handling in `api-response-utils.ts`
 
 #### 📦 Full Type Safety
@@ -110,13 +112,15 @@ src/
 │   ├── UserWelcome.astro    # User display from JWT context
 │   └── ApiResponse.astro    # Reusable API response wrapper
 ├── lib/
-│   ├── store.ts             # Product data store
+│   ├── config.ts            # Centralized configuration and validation rules
+│   ├── type-guards.ts       # Runtime type validation and type predicates
+│   ├── store.ts             # Product data store with validation
 │   ├── api-utils.ts         # API parsing utilities
 │   ├── api-response-utils.ts # Standardized API response handling
 │   ├── page-utils.ts        # Client-side interaction utilities
-│   ├── dom-utils.ts         # DOM manipulation helpers
+│   ├── dom-utils.ts         # Type-safe DOM manipulation helpers
 │   ├── url-utils.ts         # URL building and parameter utilities
-│   ├── constants.ts         # Centralized app-wide constants
+│   ├── constants.ts         # App-wide constants (re-exports from config)
 │   └── format.ts            # Data formatting helpers
 └── types/
     ├── index.ts             # Core domain types
@@ -621,12 +625,20 @@ export type SortOrder = "asc" | "desc";
 #### Validation Layer
 
 ```typescript
-// Simple validation in API routes
-if (price === 99.99) {
-  return new Response(`Error: Price cannot be 99.99`, {
-    status: 500,
-    headers: { "Content-Type": "text/html" },
-  });
+// Centralized validation rules from config.ts
+import { VALIDATION_RULES } from './config';
+
+// Type-safe validation with configurable rules
+const priceValidation = validateNumericInput(
+  price,
+  "price",
+  VALIDATION_RULES.MIN_PRICE,
+  VALIDATION_RULES.MAX_PRICE
+);
+
+// Demo validation rule (configurable)
+if (price === VALIDATION_RULES.FORBIDDEN_PRICE) {
+  return createErrorResponse(`Error: Price cannot be ${VALIDATION_RULES.FORBIDDEN_PRICE}`);
 }
 ```
 
@@ -713,11 +725,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
 });
 ```
 
-**Demo JWT Token** (hardcoded for development):
+**Demo JWT Token** (for demonstration purposes only):
 
 ```javascript
 // Payload: { userId: 1, username: "stew_loren", role: "admin", ... }
 const DEMO_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQi...";
+// Note: In production, use proper JWT library with signature verification
 ```
 
 #### Simplified JWT-Only Approach
