@@ -1,6 +1,12 @@
 export function getElementById<T extends HTMLElement>(id: string): T | null {
   if (typeof document === 'undefined') return null;
-  return document.getElementById(id) as T | null;
+  const element = document.getElementById(id);
+  if (!element) return null;
+  // Runtime type check for better safety
+  if (element instanceof HTMLElement) {
+    return element as T;
+  }
+  return null;
 }
 
 export function querySelector<T extends HTMLElement>(
@@ -8,7 +14,13 @@ export function querySelector<T extends HTMLElement>(
   parent: HTMLElement | Document = document
 ): T | null {
   if (typeof document === 'undefined') return null;
-  return parent.querySelector(selector) as T | null;
+  const element = parent.querySelector(selector);
+  if (!element) return null;
+  // Runtime type check for better safety
+  if (element instanceof HTMLElement) {
+    return element as T;
+  }
+  return null;
 }
 
 export function toggleElementDisplay(

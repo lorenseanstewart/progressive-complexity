@@ -1,10 +1,12 @@
 import type { Product, ProductTotals } from "../types";
+import { isValidProduct } from "./type-guards";
+import { VALIDATION_RULES, PAGINATION } from "./config";
 
 export interface ProductWithCurrency extends Product {
   // No additional properties needed currently
 }
 
-export const PAGE_SIZE = 10;
+export const PAGE_SIZE = PAGINATION.DEFAULT_PAGE_SIZE;
 
 function seedProducts(): ProductWithCurrency[] {
   const names: readonly string[] = [
@@ -135,15 +137,20 @@ export function updateProductField(
   }
 
   if (field === "price") {
-    if (value < 0) {
-      throw new Error("Price cannot be negative");
+    if (value < VALIDATION_RULES.MIN_PRICE || value > VALIDATION_RULES.MAX_PRICE) {
+      throw new Error(`Price must be between ${VALIDATION_RULES.MIN_PRICE} and ${VALIDATION_RULES.MAX_PRICE}`);
     }
     product.price = value;
   } else if (field === "quantity") {
-    if (value < 0) {
-      throw new Error("Quantity cannot be negative");
+    if (value < VALIDATION_RULES.MIN_QUANTITY || value > VALIDATION_RULES.MAX_QUANTITY) {
+      throw new Error(`Quantity must be between ${VALIDATION_RULES.MIN_QUANTITY} and ${VALIDATION_RULES.MAX_QUANTITY}`);
     }
     product.quantity = Math.max(0, Math.floor(value));
+  }
+
+  // Validate the product structure after modification
+  if (!isValidProduct(product)) {
+    throw new Error("Product validation failed after update");
   }
 
   return product;

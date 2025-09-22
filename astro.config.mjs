@@ -53,8 +53,5 @@ export default defineConfig({
   build: {
     // Inline small stylesheets for better performance
     inlineStylesheets: "auto",
-
-    // Compress HTML
-    compress: true,
   },
 });

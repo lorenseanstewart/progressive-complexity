@@ -2,7 +2,8 @@
 import { updateProductField, getProductById } from "../../../../lib/store";
 import { formatCurrency } from "../../../../lib/format";
 import { parseApiParams, getTableData } from "../../../../lib/api-utils";
-import { createNotFoundResponse, validateNumericInput, handleApiError } from "../../../../lib/api-response-utils";
+import { createNotFoundResponse, validateNumericInput, createErrorResponse } from "../../../../lib/api-response-utils";
+import { VALIDATION_RULES } from "../../../../lib/config";
 import QuantityCell from "../../../../components/QuantityCell.astro";
 import TotalsSummary from "../../../../components/TotalsSummary.astro";
 
@@ -10,7 +11,12 @@ const id = Number(Astro.params.id);
 const formData = await Astro.request.formData();
 
 const qtyInput = formData.get("quantity");
-const qtyValidation = validateNumericInput(qtyInput, "quantity", 0);
+const qtyValidation = validateNumericInput(
+  qtyInput,
+  "quantity",
+  VALIDATION_RULES.MIN_QUANTITY,
+  VALIDATION_RULES.MAX_QUANTITY
+);
 
 if (qtyValidation instanceof Response) {
   return qtyValidation;
@@ -21,7 +27,7 @@ const qty = qtyValidation;
 try {
   updateProductField(id, "quantity", qty);
 } catch (e) {
-  return handleApiError(e, "Error updating product");
+  return createErrorResponse("Error updating product");
 }
 
 // Get updated product and calculate new subtotal

@@ -7,14 +7,8 @@ import {
   toggleElements,
   focusInput,
   getRowId,
-  getCellElement,
   getTableCell,
 } from "./dom-utils";
-
-interface FocusInfo {
-  id: string;
-  field: "price" | "quantity";
-}
 
 export function toggleEdit(
   id: number | string,

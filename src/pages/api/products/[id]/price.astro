@@ -2,7 +2,8 @@
 import { updateProductField, getProductById } from "../../../../lib/store";
 import { formatCurrency } from "../../../../lib/format";
 import { parseApiParams, getTableData } from "../../../../lib/api-utils";
-import { createErrorResponse, createNotFoundResponse, validateNumericInput, handleApiError } from "../../../../lib/api-response-utils";
+import { createErrorResponse, createNotFoundResponse, validateNumericInput } from "../../../../lib/api-response-utils";
+import { VALIDATION_RULES } from "../../../../lib/config";
 import PriceCell from "../../../../components/PriceCell.astro";
 import TotalsSummary from "../../../../components/TotalsSummary.astro";
 
@@ -10,7 +11,12 @@ const id = Number(Astro.params.id);
 const formData = await Astro.request.formData();
 
 const priceInput = formData.get("price");
-const priceValidation = validateNumericInput(priceInput, "price", 0);
+const priceValidation = validateNumericInput(
+  priceInput,
+  "price",
+  VALIDATION_RULES.MIN_PRICE,
+  VALIDATION_RULES.MAX_PRICE
+);
 
 if (priceValidation instanceof Response) {
   return priceValidation;
@@ -18,14 +24,14 @@ if (priceValidation instanceof Response) {
 
 const price = priceValidation;
 
-if (price === 99.99) {
-  return createErrorResponse("Error: Price cannot be 99.99");
+if (price === VALIDATION_RULES.FORBIDDEN_PRICE) {
+  return createErrorResponse(`Error: Price cannot be ${VALIDATION_RULES.FORBIDDEN_PRICE}`);
 }
 
 try {
   updateProductField(id, "price", price);
 } catch (e) {
-  return handleApiError(e, "Error updating product");
+  return createErrorResponse("Error updating product");
 }
 
 // Get updated product and calculate new subtotal
