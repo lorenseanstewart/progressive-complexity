@@ -48,6 +48,7 @@ Then check the Network tab or run `npm run report` to see the actual production 
 - **Column-based search** with debounced input and focus preservation
 - **Column sorting** with visual indicators (click headers to sort)
 - **Optimistic updates** with instant visual feedback
+- **Single-flight mutations** (PATCH/POST/DELETE return updated HTML; no follow-up GET)
 - **Error handling** with graceful reversion (try entering 99.99 as a price to force an error)
 - **Keyboard shortcuts** (Enter to save, Escape to cancel)
 - **Focus preservation** during HTMX swaps
@@ -315,6 +316,47 @@ Here is the hx-optimistic template code:
     >Error</span
   >
 </template>
+```
+
+### Single-Flight Mutations (Performance)
+
+- Definition: mutation endpoints (PATCH/POST/DELETE) return updated HTML for the affected UI in the same response, eliminating the need for a follow-up GET.
+- Price/quantity updates return the new cell plus out‑of‑band swaps for subtotal and totals.
+- Row deletion returns the updated table wrapper directly.
+- Effect: fewer round trips, lower latency, and reduced server load.
+
+Price/quantity (PATCH) example:
+
+```html
+<input
+  name="price"
+  hx-trigger="keyup[key=='Enter'] changed, blur changed"
+  hx-patch="/api/products/123/price"
+  hx-ext="optimistic"
+  hx-target="#price-cell-123"
+  hx-swap="innerHTML"
+  hx-select-oob="#totals-summary, #view-sub-123"
+/>
+```
+
+Delete (DELETE) example:
+
+```astro
+---
+// /src/pages/api/products/[id]/index.astro
+// After deletion, compute fresh data and return HTML directly
+---
+
+<ApiResponse
+  data={data}
+  total={total}
+  totals={totals}
+  page={params.page}
+  pageSize={params.pageSize}
+  sort={params.sort}
+  sortDir={params.sortDir}
+  searchTerm={params.searchTerm}
+/>
 ```
 
 In `page-utils.ts`, error handling and view state management:
@@ -626,19 +668,21 @@ export type SortOrder = "asc" | "desc";
 
 ```typescript
 // Centralized validation rules from config.ts
-import { VALIDATION_RULES } from './config';
+import { VALIDATION_RULES } from "./config";
 
 // Type-safe validation with configurable rules
 const priceValidation = validateNumericInput(
   price,
   "price",
   VALIDATION_RULES.MIN_PRICE,
-  VALIDATION_RULES.MAX_PRICE
+  VALIDATION_RULES.MAX_PRICE,
 );
 
 // Demo validation rule (configurable)
 if (price === VALIDATION_RULES.FORBIDDEN_PRICE) {
-  return createErrorResponse(`Error: Price cannot be ${VALIDATION_RULES.FORBIDDEN_PRICE}`);
+  return createErrorResponse(
+    `Error: Price cannot be ${VALIDATION_RULES.FORBIDDEN_PRICE}`,
+  );
 }
 ```
 
